@@ -4,35 +4,44 @@
         Title="EXVS2 Launcher" Width="900" Height="900" MinWidth="760" MinHeight="680"
         WindowStartupLocation="CenterScreen" Closing="Window_Closing"
         ToolTipService.InitialShowDelay="700"
-        ToolTipService.ShowDuration="20000"
+        ToolTipService.ShowDuration="30000"
         ToolTipService.BetweenShowDelay="200">
   <DockPanel Margin="10">
     <!-- Profile bar -->
-    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-      <Label Content="Cab profile:" ToolTip="{StaticResource Tip.Profile}" />
-      <ComboBox x:Name="ProfileBox" Width="260" Margin="0,0,6,0" DisplayMemberPath="Name"
-                SelectionChanged="ProfileBox_SelectionChanged" ToolTip="{StaticResource Tip.Profile}" />
-      <Button Content="New" Click="NewProfile_Click" ToolTip="{StaticResource Tip.ProfileNew}" />
-      <Button Content="Delete" Click="DeleteProfile_Click" ToolTip="{StaticResource Tip.ProfileDelete}" />
-      <Button Content="Save" Click="Save_Click" ToolTip="{StaticResource Tip.ProfileSave}" />
-      <Button Content="Troubleshooting" Click="Troubleshooting_Click" ToolTip="{StaticResource Tip.Troubleshooting}" />
+    <DockPanel DockPanel.Dock="Top">
+      <StackPanel DockPanel.Dock="Left" Orientation="Horizontal">
+        <Label Content="Cab profile:" ToolTip="{StaticResource Tip.Profile}" />
+        <ComboBox x:Name="ProfileBox" Width="260" Margin="0,0,6,0" DisplayMemberPath="Name"
+                  SelectionChanged="ProfileBox_SelectionChanged" ToolTip="{StaticResource Tip.Profile}" />
+        <Button Content="New" Click="NewProfile_Click" ToolTip="{StaticResource Tip.ProfileNew}" />
+        <Button Content="Delete" Click="DeleteProfile_Click" ToolTip="{StaticResource Tip.ProfileDelete}" />
+        <Button Content="Save" Click="Save_Click" ToolTip="{StaticResource Tip.ProfileSave}" />
+        <Button Content="Troubleshooting" Click="Troubleshooting_Click" ToolTip="{StaticResource Tip.Troubleshooting}" />
+      </StackPanel>
       <TextBlock x:Name="StoreText" VerticalAlignment="Center" Foreground="Gray" Margin="6,0,0,0"
-                 TextTrimming="CharacterEllipsis" ToolTip="{StaticResource Tip.ProfileStore}" />
-    </StackPanel>
+                 TextWrapping="Wrap" ToolTip="{StaticResource Tip.ProfileStore}" />
+    </DockPanel>
 
     <!-- Start / stop bar -->
     <Border DockPanel.Dock="Top" Margin="0,8,0,0" Padding="8" Background="#FFF3F6FA" BorderBrush="#FFCBD5E1" BorderThickness="1" CornerRadius="3">
       <StackPanel>
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-          <Button x:Name="StartButton" Content="Start all" FontWeight="Bold" MinWidth="100"
-                  Click="Start_Click" ToolTip="{StaticResource Tip.StartAll}" />
-          <Button x:Name="CancelButton" Content="Cancel" IsEnabled="False" Click="Cancel_Click"
-                  ToolTip="{StaticResource Tip.Cancel}" />
-          <Button x:Name="StopAllButton" Content="Stop all" Click="StopAll_Click"
-                  ToolTip="{StaticResource Tip.StopAll}" />
-          <Button Content="Check port" Click="CheckPort_Click" ToolTip="{StaticResource Tip.CheckPort}" />
-          <TextBlock x:Name="StageText" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="SemiBold" Text="Idle" />
-        </StackPanel>
+        <Grid Margin="0,0,0,6">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <StackPanel Orientation="Horizontal">
+            <Button x:Name="StartButton" Content="Start all" FontWeight="Bold" MinWidth="100"
+                    Click="Start_Click" ToolTip="{StaticResource Tip.StartAll}" />
+            <Button x:Name="CancelButton" Content="Cancel" IsEnabled="False" Click="Cancel_Click"
+                    ToolTip="{StaticResource Tip.Cancel}" />
+            <Button x:Name="StopAllButton" Content="Stop all" Click="StopAll_Click"
+                    ToolTip="{StaticResource Tip.StopAll}" />
+            <Button Content="Check port" Click="CheckPort_Click" ToolTip="{StaticResource Tip.CheckPort}" />
+          </StackPanel>
+          <TextBlock Grid.Column="1" x:Name="StageText" VerticalAlignment="Center" Margin="10,0,0,0"
+                     FontWeight="SemiBold" Text="Idle" TextWrapping="Wrap" />
+        </Grid>
         <Grid>
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="110" />
@@ -136,13 +145,13 @@
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Content="Serial (config.ini)" ToolTip="{StaticResource Tip.Serial}" />
             <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SerialText" VerticalAlignment="Center" FontFamily="Consolas"
-                       ToolTip="{StaticResource Tip.Serial}" />
+                       TextWrapping="Wrap" ToolTip="{StaticResource Tip.Serial}" />
             <Button Grid.Row="0" Grid.Column="2" Content="New serial" Click="NewSerial_Click"
                     ToolTip="{StaticResource Tip.NewSerial}" />
 
             <Label Grid.Row="1" Content="Card (card.ini)" ToolTip="{StaticResource Tip.Card}" />
             <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CardText" VerticalAlignment="Center"
-                       ToolTip="{StaticResource Tip.Card}" />
+                       TextWrapping="Wrap" ToolTip="{StaticResource Tip.Card}" />
             <Button Grid.Row="1" Grid.Column="2" Content="New card" Click="NewCard_Click"
                     ToolTip="{StaticResource Tip.NewCard}" />
 
@@ -154,8 +163,10 @@
             </StackPanel>
 
             <CheckBox Grid.Row="3" Grid.Column="1" x:Name="SyncSnowCheck"
-                      Content="Also update SnowLauncher.ini if it exists (so SnowLauncher won't put old values back)"
-                      ToolTip="{StaticResource Tip.SyncSnow}" />
+                      ToolTip="{StaticResource Tip.SyncSnow}">
+              <TextBlock TextWrapping="Wrap"
+                         Text="Also update SnowLauncher.ini if it exists (so SnowLauncher won't put old values back)" />
+            </CheckBox>
           </Grid>
         </GroupBox>
 
@@ -170,8 +181,10 @@
               <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
             </Grid.RowDefinitions>
             <CheckBox Grid.Row="0" Grid.Column="1" x:Name="AutoIpCheck"
-                      Content="Detect this PC's LAN IP for the PCB (client) on every Start"
-                      ToolTip="{StaticResource Tip.AutoDetectIp}" />
+                      ToolTip="{StaticResource Tip.AutoDetectIp}">
+              <TextBlock TextWrapping="Wrap"
+                         Text="Detect this PC's LAN IP for the PCB (client) on every Start" />
+            </CheckBox>
             <Button Grid.Row="0" Grid.Column="2" Content="Detect now" Click="DetectIp_Click"
                     ToolTip="{StaticResource Tip.DetectNow}" />
 
@@ -185,7 +198,8 @@
             <Button Grid.Row="2" Grid.Column="2" Content="Write IPs" Click="WriteIps_Click"
                     ToolTip="{StaticResource Tip.WriteIps}" />
 
-            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CurrentIpText" TextWrapping="Wrap"
+            <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3" x:Name="CurrentIpText"
+                       TextWrapping="Wrap" Margin="0,6,0,0"
                        ToolTip="{StaticResource Tip.CurrentIps}" />
           </Grid>
         </GroupBox>

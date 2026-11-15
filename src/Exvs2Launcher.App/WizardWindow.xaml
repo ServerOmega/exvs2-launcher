@@ -5,7 +5,7 @@
         MinWidth="640" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         ToolTipService.InitialShowDelay="700"
-        ToolTipService.ShowDuration="20000">
+        ToolTipService.ShowDuration="30000">
   <DockPanel Margin="14">
     <TextBlock DockPanel.Dock="Top" x:Name="StepTitle" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,2" Text="Game folder" />
     <TextBlock DockPanel.Dock="Top" x:Name="StepSubtitle" Foreground="Gray" Margin="0,0,0,10" Text="Step 1 of 7" />

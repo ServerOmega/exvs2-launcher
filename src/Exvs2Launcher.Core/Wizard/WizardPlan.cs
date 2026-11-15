@@ -23,7 +23,7 @@ public sealed class WizardPlan
 /// <summary>Builds a preview of file changes and applies them (with backups) when the user confirms.</summary>
 public static class WizardPlanner
 {
-    public static WizardPlan Preview(WizardState state, ProfileFile file, GameConfigWriter reader)
+    public static WizardPlan Preview(WizardState state, ProfileFile file, GameConfigWriter reader, IReadOnlyList<NicAddress>? nics = null)
     {
         var plan = new WizardPlan();
         var folder = GameFolderValidator.Check(state.GameFolder, file, state.ProfileName);
@@ -83,13 +83,17 @@ public static class WizardPlanner
             if (!string.IsNullOrWhiteSpace(state.SerialMessage)) plan.Notes.Add(state.SerialMessage);
         }
 
+        var pcbReason = BindAddress.RejectReason(state.PcbIp, "PCB", nics);
+        var lmReason = BindAddress.RejectReason(state.LmIp, "LM", nics);
         if (string.IsNullOrWhiteSpace(state.PcbIp))
             plan.Blocking.Add("Pick a PCB (cab) IP from this PC's addresses.");
-        if (LoopbackAddress.IsLoopback(state.LmIp))
-            plan.Blocking.Add(LoopbackAddress.LmRejected);
+        else if (pcbReason is not null)
+            plan.Blocking.Add(pcbReason);
+        if (lmReason is not null)
+            plan.Blocking.Add(lmReason);
         if (string.IsNullOrWhiteSpace(state.LmIp))
             plan.Blocking.Add("Pick an LM IP. For a single cab it may match the PCB IP; for more than one cab on this PC pick a second address.");
-        else if (!LoopbackAddress.IsLoopback(state.LmIp) && !string.IsNullOrWhiteSpace(state.PcbIp))
+        else if (lmReason is null && pcbReason is null)
         {
             bool pcbChange = !NetworkBinding.SameIp(current.ClientIp, state.PcbIp);
             bool lmChange = !NetworkBinding.SameIp(current.LmIp, state.LmIp);
@@ -149,9 +153,9 @@ public static class WizardPlanner
         return plan;
     }
 
-    public static WriteReport Apply(WizardState state, ProfileFile file, GameConfigWriter writer, BackupService? backups = null)
+    public static WriteReport Apply(WizardState state, ProfileFile file, GameConfigWriter writer, BackupService? backups = null, IReadOnlyList<NicAddress>? nics = null)
     {
-        var preview = Preview(state, file, writer);
+        var preview = Preview(state, file, writer, nics);
         var report = new WriteReport();
         if (!preview.CanApply)
         {

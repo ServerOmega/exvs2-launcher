@@ -46,21 +46,22 @@ public static class NetworkBinding
         IReadOnlyList<NicAddress> nics)
     {
         var messages = new List<string>();
+        currentLmIp = DropUnusable(currentLmIp, "LM", nics, messages);
+        profileLmIp = DropUnusable(profileLmIp, "LM", nics, messages);
+        currentPcbIp = DropUnusable(currentPcbIp, "PCB", nics, messages);
+        profilePcbIp = DropUnusable(profilePcbIp, "PCB", nics, messages);
         string? pcb = ResolvePcb(currentPcbIp, profilePcbIp, autoDetect, nics, messages);
-        if (LoopbackAddress.IsLoopback(currentLmIp))
+        var reasonPcb = BindAddress.RejectReason(pcb, "PCB", nics);
+        if (reasonPcb is not null)
         {
-            messages.Add("lmnfig.ini currently has a loopback LM IP. " + LoopbackAddress.LmRejected + " That value will not be kept.");
-            currentLmIp = null;
-        }
-        if (LoopbackAddress.IsLoopback(profileLmIp))
-        {
-            messages.Add("The profile LM IP is loopback. " + LoopbackAddress.LmRejected);
-            profileLmIp = null;
+            messages.Add(reasonPcb);
+            pcb = null;
         }
         var (lm, kept) = ResolveLm(currentLmIp, profileLmIp, autoDetect, nics, messages);
-        if (LoopbackAddress.IsLoopback(lm))
+        var reasonLm = BindAddress.RejectReason(lm, "LM", nics);
+        if (reasonLm is not null)
         {
-            messages.Add(LoopbackAddress.LmRejected);
+            messages.Add(reasonLm + " That value will not be kept.");
             lm = null;
             kept = false;
         }
@@ -143,6 +144,14 @@ public static class NetworkBinding
             return (profileLmIp.Trim(), false);
         }
         return (null, false);
+    }
+
+    private static string? DropUnusable(string? ip, string label, IReadOnlyList<NicAddress> nics, List<string> messages)
+    {
+        var reason = BindAddress.RejectReason(ip, label, nics);
+        if (reason is null) return ip;
+        messages.Add(label + " cannot be used. " + reason + " That value will not be kept.");
+        return null;
     }
 
     private static string? First(string? a, string? b) =>

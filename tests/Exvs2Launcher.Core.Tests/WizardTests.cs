@@ -110,6 +110,48 @@ public class LoopbackAndSecondaryAddressTests
         Assert.Contains(d.Messages, m => m.Contains("loopback") && m.Contains("will not be kept"));
         Assert.DoesNotContain(d.Messages, m => m.Contains("left as 127.0.0.1") && m.Contains("authoritative"));
     }
+
+    [Theory]
+    [InlineData("0.0.0.0")]
+    [InlineData("127.0.0.1")]
+    [InlineData("169.254.1.1")]
+    [InlineData("10.9.9.9")]
+    public void BindAddress_rejects_unusable_or_unassigned(string ip)
+    {
+        var nics = new[] { new NicAddress("Ethernet", "Realtek", "192.168.1.69", NetworkInterfaceType.Ethernet, true, false) };
+        var reason = BindAddress.RejectReason(ip, "LM", nics);
+        Assert.NotNull(reason);
+        if (ip == "0.0.0.0") Assert.Contains("0.0.0.0", reason);
+        if (ip.StartsWith("127.")) Assert.Contains("21-01", reason);
+        if (ip.StartsWith("169.254.")) Assert.Contains("link-local", reason);
+        if (ip == "10.9.9.9")
+        {
+            Assert.Contains("not assigned", reason);
+            Assert.Contains("failed to find interface", reason);
+        }
+    }
+
+    [Fact]
+    public void BindAddress_accepts_a_real_local_address()
+    {
+        var nics = new[] { new NicAddress("Ethernet", "Realtek", "192.168.1.245", NetworkInterfaceType.Ethernet, true, false) };
+        Assert.Null(BindAddress.RejectReason("192.168.1.245", "LM", nics));
+        Assert.True(BindAddress.IsUsableLocal("192.168.1.245", nics));
+        Assert.False(BindAddress.IsUsableLocal("0.0.0.0", nics));
+    }
+
+    [Fact]
+    public void ChooseLm_rejects_unspecified_and_link_local()
+    {
+        var nics = new[] { new NicAddress("Ethernet", "Realtek", "192.168.1.69", NetworkInterfaceType.Ethernet, true, false) };
+        var (lm, msgs) = SecondaryAddress.ChooseLm(true, "192.168.1.69", "0.0.0.0", nics);
+        Assert.Null(lm);
+        Assert.Contains(msgs, m => m.Contains("0.0.0.0") && m.Contains("failed to find interface"));
+        var (lm2, msgs2) = SecondaryAddress.ChooseLm(true, "192.168.1.69", "169.254.0.1", nics);
+        Assert.Null(lm2);
+        Assert.Contains(msgs2, m => m.Contains("link-local"));
+    }
+
 }
 
 public class GameFolderValidatorTests

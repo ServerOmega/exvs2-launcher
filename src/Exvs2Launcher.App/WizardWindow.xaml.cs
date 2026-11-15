@@ -176,9 +176,12 @@ public partial class WizardWindow : Window
             _state.SerialMessage = decision.Message;
             SerialBox.Text = decision.Serial;
 
-            if (!string.IsNullOrWhiteSpace(s.ClientIp) && string.IsNullOrWhiteSpace(PcbIpBox.Text))
+            try { _nics = LanAddressDetector.Enumerate(); } catch (Exception) { }
+            if (!string.IsNullOrWhiteSpace(s.ClientIp) && string.IsNullOrWhiteSpace(PcbIpBox.Text)
+                && BindAddress.RejectReason(s.ClientIp, "PCB", _nics) is null)
                 PcbIpBox.Text = s.ClientIp;
-            if (!string.IsNullOrWhiteSpace(s.LmIp) && !LoopbackAddress.IsLoopback(s.LmIp) && string.IsNullOrWhiteSpace(LmIpBox.Text))
+            if (!string.IsNullOrWhiteSpace(s.LmIp) && string.IsNullOrWhiteSpace(LmIpBox.Text)
+                && BindAddress.RejectReason(s.LmIp, "LM", _nics) is null)
                 LmIpBox.Text = s.LmIp;
         }
         catch (Exception ex)
@@ -318,11 +321,12 @@ public partial class WizardWindow : Window
         _state.PcbIp = IpFrom(PcbIpBox.Text);
         var typedLm = IpFrom(LmIpBox.Text);
 
-        if (LoopbackAddress.IsLoopback(typedLm))
+        var typedBad = BindAddress.RejectReason(typedLm, "LM", _nics);
+        if (typedBad is not null)
         {
-            NetworkStatus.Text = LoopbackAddress.LmRejected;
+            NetworkStatus.Text = typedBad;
             CommandBox.Visibility = Visibility.Collapsed;
-            StatusText.Text = LoopbackAddress.LmRejected;
+            StatusText.Text = typedBad;
             _state.LmIp = null;
             return;
         }
@@ -344,7 +348,9 @@ public partial class WizardWindow : Window
         else
             CommandBox.Visibility = Visibility.Collapsed;
 
-        StatusText.Text = LoopbackAddress.IsLoopback(_state.LmIp) ? LoopbackAddress.LmRejected : "";
+        StatusText.Text = BindAddress.RejectReason(_state.LmIp, "LM", _nics)
+            ?? BindAddress.RejectReason(_state.PcbIp, "PCB", _nics)
+            ?? "";
     }
 
     // ----- card server -----
@@ -424,10 +430,10 @@ public partial class WizardWindow : Window
             var folder = GameFolderValidator.Check(_state.GameFolder, _file, _state.ProfileName);
             lines.Add(folder.CanContinue ? "Game folder: OK — " + folder.Path : "Game folder: " + string.Join(" ", folder.Issues.Select(i => i.Message)));
 
-            if (LoopbackAddress.IsLoopback(_state.LmIp))
-                lines.Add("LM IP: " + LoopbackAddress.LmRejected);
-            else
-                lines.Add("LM IP: " + (_state.LmIp ?? "(not set)"));
+            var lmWhy = BindAddress.RejectReason(_state.LmIp, "LM", _nics);
+            var pcbWhy = BindAddress.RejectReason(_state.PcbIp, "PCB", _nics);
+            if (pcbWhy is not null) lines.Add(pcbWhy);
+            lines.Add(lmWhy is not null ? lmWhy : "LM IP: " + (_state.LmIp ?? "(not set)"));
 
             var fw = WizardChecks.DetectFirewall(_env, _state.GameFolder, _state.CardServerPath);
             lines.Add("Firewall:");
@@ -460,7 +466,7 @@ public partial class WizardWindow : Window
     private void RefreshSummary()
     {
         CollectFromUi();
-        var plan = WizardPlanner.Preview(_state, _file, _writer);
+        var plan = WizardPlanner.Preview(_state, _file, _writer, _nics);
         var lines = new List<string>();
         if (plan.Writes.Count == 0)
             lines.Add("No game files need to change. The launcher profile will still be saved.");
@@ -533,9 +539,13 @@ public partial class WizardWindow : Window
                     reason = "Pick a PCB (cab) IP.";
                     return false;
                 }
-                if (LoopbackAddress.IsLoopback(_state.LmIp) || LoopbackAddress.IsLoopback(IpFrom(LmIpBox.Text)))
+                var pcbWhy = BindAddress.RejectReason(_state.PcbIp, "PCB", _nics);
+                if (pcbWhy is not null) { reason = pcbWhy; return false; }
+                var lmWhy = BindAddress.RejectReason(_state.LmIp, "LM", _nics)
+                            ?? BindAddress.RejectReason(IpFrom(LmIpBox.Text), "LM", _nics);
+                if (lmWhy is not null)
                 {
-                    reason = LoopbackAddress.LmRejected;
+                    reason = lmWhy;
                     return false;
                 }
                 if (string.IsNullOrWhiteSpace(_state.LmIp))
@@ -581,7 +591,7 @@ public partial class WizardWindow : Window
     private void Finish(bool start)
     {
         CollectFromUi();
-        var plan = WizardPlanner.Preview(_state, _file, _writer);
+        var plan = WizardPlanner.Preview(_state, _file, _writer, _nics);
         if (!plan.CanApply)
         {
             StatusText.Text = string.Join(Environment.NewLine, plan.Blocking);
@@ -589,7 +599,7 @@ public partial class WizardWindow : Window
         }
         try
         {
-            var report = WizardPlanner.Apply(_state, _file, _writer);
+            var report = WizardPlanner.Apply(_state, _file, _writer, nics: _nics);
             _store.Save(_file);
             ResultProfile = _file.Profiles.FirstOrDefault(p => p.Name == _file.LastSelected) ?? _state.ToProfile();
             ResultWrites = report;

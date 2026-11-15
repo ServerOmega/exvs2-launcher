@@ -1,4 +1,4 @@
-# Testing the v0.2.0 launcher
+# Testing the v0.2.1 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -8,7 +8,8 @@ or start-all while they are open). Per-component Start/Stop can be used when onl
 Use `Exvs2Launcher.exe` from the self-contained build (no .NET install needed) or the small framework-dependent one
 (needs the .NET 8 Desktop Runtime). Put it in its own folder, **not** inside a game folder. It saves
 `exvs2-launcher.profiles.json` and `exvs2-launcher.log` next to itself. Hover any setting or button for a short
-delay to read what it does.
+delay to read what it does. On a high-DPI display (for example 4K at 175%), the tooltip should wrap instead of
+being cut off as a single long line, and the gray "In the files now" note should wrap too.
 
 ## 1. First-run wizard (or New)
 
@@ -45,7 +46,11 @@ The main window still has Browse / Save for an existing profile. **Troubleshooti
 ## 2. Check port
 
 Click **Check port** with the card server closed: "Port 28080 is free". With the patched server open: "patched card
-server Server-Infinite (pid ...)". With SnowLauncher's stock server open: "STOCK card server".
+server ... (pid ...)". If the hidden build is a renamed Server.exe next to a BUILD_COMMIT file (for example
+`mm-server2`), it should say it is the patched card server at that path, not stock. With the pack's stock
+`server\Server.exe` open: "stock card server". Start all should reuse the patched server. Clicking Start all
+again should not repeat the same failure line. The status label next to Check port should show the reason, not
+just "Failed".
 
 ## 3. New serial / New card
 
@@ -73,7 +78,9 @@ server Server-Infinite (pid ...)". With SnowLauncher's stock server open: "STOCK
    error 21-01 (live monitor disconnect).
 5. `127.0.0.1` (or any loopback address) is rejected as an LM IP in both the main window and the wizard, including
    Write IPs and Start. If `lmnfig.ini` already has `127.0.0.1`, a red warning appears and that value is not kept as
-   authoritative — pick a LAN address instead.
+   authoritative — pick a LAN address instead. The same applies to `0.0.0.0`, `169.254.x`, and any address not
+currently assigned to a local adapter (those make the LM fail with "failed to find interface"). The IP
+dropdowns only list real adapter addresses.
 
 ## 5. Start and stop
 
@@ -90,7 +97,7 @@ server Server-Infinite (pid ...)". With SnowLauncher's stock server open: "STOCK
 Please report: anything in the log that looks wrong, whether the game boots and reaches the card screen, whether
 LM/client need a longer "LM → client delay", and whether the PCB and LM IPs it used are the ones you expected.
 
-## Known gaps in v0.2.0
+## Known gaps in v0.2.1
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.

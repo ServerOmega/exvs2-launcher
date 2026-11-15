@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Exvs2Launcher.Core.Launch;
 
@@ -71,12 +72,15 @@ public sealed class WindowsPortOwnerLookup : IPortOwnerLookup
         int? pid = Find(AfInet, port, rowSize: 24, portOffset: 8, pidOffset: 20)
                 ?? Find(AfInet6, port, rowSize: 56, portOffset: 20, pidOffset: 52);
         if (pid is null) return null;
-        string? name = null, path = null;
+        string? name = null, path = ProcessImage.TryGetPath(pid.Value);
         try
         {
             using var p = Process.GetProcessById(pid.Value);
             name = p.ProcessName;
-            try { path = p.MainModule?.FileName; } catch (Win32Exception) { } catch (InvalidOperationException) { }
+            if (path is null)
+            {
+                try { path = p.MainModule?.FileName; } catch (Win32Exception) { } catch (InvalidOperationException) { }
+            }
         }
         catch (ArgumentException) { }
         return new PortOwner(pid.Value, name, path);
@@ -121,10 +125,14 @@ public sealed class SystemProcessControl : IProcessControl
             {
                 string? path = null, name = null;
                 try { name = p.ProcessName; } catch (InvalidOperationException) { }
-                try { path = p.MainModule?.FileName; }
-                catch (Win32Exception) { }
-                catch (InvalidOperationException) { }
-                catch (NotSupportedException) { }
+                path = ProcessImage.TryGetPath(p.Id);
+                if (path is null)
+                {
+                    try { path = p.MainModule?.FileName; }
+                    catch (Win32Exception) { }
+                    catch (InvalidOperationException) { }
+                    catch (NotSupportedException) { }
+                }
                 list.Add(new RunningProcessInfo(p.Id, path, name));
             }
             catch (Exception) { }
@@ -145,3 +153,41 @@ public sealed class SystemProcessControl : IProcessControl
         catch (Win32Exception) { }
     }
 }
+
+/// <summary>
+/// Resolves a process exe path with <c>QueryFullProcessImageName</c>, which only needs
+/// PROCESS_QUERY_LIMITED_INFORMATION. <c>Process.MainModule</c> often fails with a Win32Exception
+/// (access denied / missing VM_READ) and left the path blank, which made a renamed patched
+/// Server.exe look like the pack's stock server.
+/// </summary>
+internal static class ProcessImage
+{
+    private const uint ProcessQueryLimitedInformation = 0x1000;
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern IntPtr OpenProcess(uint access, bool inherit, int processId);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr handle);
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool QueryFullProcessImageName(IntPtr hProcess, int flags, StringBuilder exeName, ref int size);
+
+    public static string? TryGetPath(int pid)
+    {
+        if (!OperatingSystem.IsWindows() || pid <= 0) return null;
+        var handle = OpenProcess(ProcessQueryLimitedInformation, false, pid);
+        if (handle == IntPtr.Zero) return null;
+        try
+        {
+            var sb = new StringBuilder(1024);
+            int size = sb.Capacity;
+            if (!QueryFullProcessImageName(handle, 0, sb, ref size) || size <= 0) return null;
+            var path = sb.ToString();
+            return string.IsNullOrWhiteSpace(path) ? null : path;
+        }
+        catch (Exception) { return null; }
+        finally { CloseHandle(handle); }
+    }
+}
+

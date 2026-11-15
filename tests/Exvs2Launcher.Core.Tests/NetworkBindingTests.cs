@@ -30,15 +30,31 @@ public class NetworkBindingTests
     }
 
     [Fact]
-    public void Auto_detect_does_not_overwrite_lmnfig_even_when_that_address_is_not_local()
+    public void Auto_detect_does_not_keep_an_lm_ip_that_is_not_on_a_local_adapter()
     {
         var d = NetworkBinding.Resolve(
-            "192.168.1.69", "10.9.9.9", null, "192.168.1.69",
+            "192.168.1.69", "10.9.9.9", null, profileLmIp: null,
             autoDetect: true, nics: Nics);
 
-        Assert.Equal("10.9.9.9", d.LmIp);
-        Assert.True(d.KeptExistingLmIp);
-        Assert.Contains(d.Messages, m => m.Contains("not assigned to a local adapter") && m.Contains("10.9.9.9"));
+        Assert.Null(d.LmIp);
+        Assert.False(d.KeptExistingLmIp);
+        Assert.Contains(d.Messages, m => m.Contains("not assigned") && m.Contains("10.9.9.9"));
+        Assert.Contains(d.Messages, m => m.Contains("will not be kept"));
+        Assert.DoesNotContain(d.Messages, m => m.Contains("10.9.9.9 →"));
+    }
+
+    [Theory]
+    [InlineData("0.0.0.0")]
+    [InlineData("127.0.0.1")]
+    [InlineData("169.254.10.1")]
+    public void Unusable_lmnfig_addresses_are_not_kept(string bad)
+    {
+        var d = NetworkBinding.Resolve(
+            "192.168.1.69", bad, null, bad,
+            autoDetect: true, nics: Nics);
+        Assert.Null(d.LmIp);
+        Assert.False(d.KeptExistingLmIp);
+        Assert.Contains(d.Messages, m => m.Contains("will not be kept") || m.Contains("failed to find interface") || m.Contains("21-01") || m.Contains("link-local") || m.Contains("0.0.0.0"));
     }
 
     [Fact]

@@ -54,22 +54,18 @@ public sealed class StartSequencer
             var owner = _owners.FindListener(plan.Port);
             if (owner is not null) listening = true;
             var kind = PortOwnerClassifier.Classify(listening, owner, plan);
-            string who = owner?.Describe() ?? "an unidentified program";
+            string explain = PortOwnerClassifier.Describe(kind, plan.Port, owner);
 
             switch (kind)
             {
                 case PortOwnerKind.StockServer:
-                    return Fail($"Port {plan.Port} is held by the stock card server {who}. Close it (or SnowLauncher) first; " +
-                                "the game would use the stock server instead of the patched one.");
                 case PortOwnerKind.Other:
-                    return Fail($"Port {plan.Port} is held by {who}, which is not the patched card server. Close it and try again.");
                 case PortOwnerKind.Unknown:
-                    return Fail($"Something is already listening on {plan.Host}:{plan.Port}, but the launcher could not tell which program. " +
-                                "Close it and try again.");
+                    return Fail(explain);
                 case PortOwnerKind.PatchedServer:
                     if (!plan.ReuseRunningPatchedServer)
-                        return Fail($"The patched card server is already running: {who}. Close it or allow reuse.");
-                    Say($"The patched card server is already listening on port {plan.Port}: {who}. Using it.");
+                        return Fail(explain);
+                    Say(explain + " Using it.");
                     break;
                 case PortOwnerKind.None:
                     if (!plan.StartCardServer)

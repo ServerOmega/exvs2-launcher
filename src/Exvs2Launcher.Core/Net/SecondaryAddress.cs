@@ -98,18 +98,20 @@ public static class SecondaryAddress
     public static (string? LmIp, IReadOnlyList<string> Messages) ChooseLm(bool onlyCabOnThisPc, string? pcbIp, string? chosenLmIp, IReadOnlyList<NicAddress> nics)
     {
         var messages = new List<string>();
-        if (LoopbackAddress.IsLoopback(chosenLmIp))
+        var bad = BindAddress.RejectReason(chosenLmIp, "LM", nics);
+        if (bad is not null)
         {
-            messages.Add(LoopbackAddress.LmRejected);
+            messages.Add(bad);
             return (null, messages);
         }
 
         if (onlyCabOnThisPc)
         {
             var lm = string.IsNullOrWhiteSpace(chosenLmIp) ? pcbIp : chosenLmIp;
-            if (LoopbackAddress.IsLoopback(lm))
+            var shareBad = BindAddress.RejectReason(lm, "LM", nics);
+            if (shareBad is not null)
             {
-                messages.Add(LoopbackAddress.LmRejected);
+                messages.Add(shareBad);
                 return (null, messages);
             }
             if (NetworkBinding.SameIp(pcbIp, lm))

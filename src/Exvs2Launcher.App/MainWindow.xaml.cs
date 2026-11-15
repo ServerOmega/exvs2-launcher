@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private string? _folderWhenShown;
     private bool _loading;
     private bool _starting;
+    private string? _lastLogBody;
     private CancellationTokenSource? _startCts;
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
@@ -126,7 +127,7 @@ public partial class MainWindow : Window
     private bool SaveAll(bool quiet = false)
     {
         if (!ReadForm()) return false;
-        if (RejectLoopbackLm(_current!.LmIp)) return false;
+        if (RejectBadBindAddresses()) return false;
         var dupFolder = _file.Profiles.Where(p => !ReferenceEquals(p, _current) && !string.IsNullOrWhiteSpace(p.GameFolder))
             .FirstOrDefault(p => ReferenceEquals(ProfileStore.FindByFolder(new ProfileFile { Profiles = { p } }, _current!.GameFolder), p));
         if (dupFolder is not null) { Warn($"Profile \"{dupFolder.Name}\" already uses this game folder. Use one profile per folder."); return false; }
@@ -158,9 +159,15 @@ public partial class MainWindow : Window
             CardText.Text = !s.CardPresent ? "No card in card.ini" : s.CardValid ? "Card present (values hidden)" : "Card present but not in the expected format";
             CurrentIpText.Text = $"In the files now: config.ini IpAddress={s.ClientIp ?? "-"} (PCB), lmnfig.ini IpAddress={s.LmIp ?? "-"} (LM; authoritative), Server={s.ClientServer ?? "-"}";
             CurrentIpText.Foreground = System.Windows.Media.Brushes.Gray;
-            if (LoopbackAddress.IsLoopback(s.LmIp))
+            var nics = SafeNics();
+            var fileReasons = new[]
             {
-                CurrentIpText.Text += "  " + LoopbackAddress.LmRejected;
+                BindAddress.RejectReason(s.ClientIp, "PCB", nics),
+                BindAddress.RejectReason(s.LmIp, "LM", nics),
+            }.Where(r => r is not null).ToList();
+            if (fileReasons.Count > 0)
+            {
+                CurrentIpText.Text += "  " + string.Join(" ", fileReasons);
                 CurrentIpText.Foreground = System.Windows.Media.Brushes.DarkRed;
             }
             else if (NetworkBinding.SameIp(s.ClientIp, s.LmIp) && s.ClientIp is not null)
@@ -431,8 +438,8 @@ public partial class MainWindow : Window
             try
             {
                 var existing = _writer.Read(GameFolderBox.Text.Trim()).LmIp;
-                if (LoopbackAddress.IsLoopback(existing))
-                    Log("lmnfig.ini has a loopback LM IP. " + LoopbackAddress.LmRejected + " It was not copied into the LM IP box.");
+                if (BindAddress.RejectReason(existing, "LM", nics) is { } why)
+                    Log("lmnfig.ini LM IP was not copied into the box. " + why);
                 else if (existing is not null && NetworkBinding.FindLocal(existing, nics) is not null)
                 {
                     LmIpBox.Text = existing;
@@ -446,7 +453,7 @@ public partial class MainWindow : Window
     private void WriteIps_Click(object sender, RoutedEventArgs e)
     {
         if (!ReadForm() || !GameFilesWritable(out var folder)) return;
-        if (RejectLoopbackLm(_current!.LmIp)) return;
+        if (RejectBadBindAddresses()) return;
         try
         {
             if (NetworkBinding.SameIp(_current.PcbIp, _current.LmIp) && _current.PcbIp is not null)
@@ -489,8 +496,8 @@ public partial class MainWindow : Window
             var outcome = await start();
             if (!outcome.Succeeded && outcome.FinalStage != StartStage.Cancelled)
             {
-                Log(outcome.Message);
-                StageText.Text = "Failed";
+                // Fail() already logged the message; don't write it a second time.
+                SetStage("Failed: " + outcome.Message);
             }
             SaveAll(quiet: true);
             if (_current is not null) ShowProfile(_current);
@@ -598,14 +605,9 @@ public partial class MainWindow : Window
         bool listening = await _probe.IsListeningAsync(plan.Host, plan.Port, CancellationToken.None);
         var owner = _owners.FindListener(plan.Port);
         var kind = PortOwnerClassifier.Classify(listening || owner is not null, owner, plan);
-        Log(kind switch
-        {
-            PortOwnerKind.None => $"Port {plan.Port} is free. Start will launch the card server first.",
-            PortOwnerKind.PatchedServer => $"Port {plan.Port}: patched card server {owner!.Describe()}. Start will reuse it.",
-            PortOwnerKind.StockServer => $"Port {plan.Port}: STOCK card server {owner!.Describe()}. Close it (and SnowLauncher) before Start.",
-            PortOwnerKind.Other => $"Port {plan.Port}: held by {owner!.Describe()}, not the patched card server.",
-            _ => $"Port {plan.Port} is in use, but the owning program could not be identified.",
-        });
+        var msg = PortOwnerClassifier.Describe(kind, plan.Port, owner);
+        Log(msg);
+        SetStage(kind is PortOwnerKind.None or PortOwnerKind.PatchedServer ? msg : "Check port: " + msg);
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)
@@ -628,10 +630,22 @@ public partial class MainWindow : Window
     private static string IpFrom(string text) => text.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
     private static string? NullIfBlank(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
 
-    private bool RejectLoopbackLm(string? lm)
+    private IReadOnlyList<NicAddress> SafeNics()
     {
-        if (!LoopbackAddress.IsLoopback(lm)) return false;
-        Warn(LoopbackAddress.LmRejected);
+        try { return LanAddressDetector.Enumerate(); }
+        catch (Exception) { return Array.Empty<NicAddress>(); }
+    }
+
+    private bool RejectBadBindAddresses()
+    {
+        var nics = SafeNics();
+        var reasons = new[]
+        {
+            BindAddress.RejectReason(_current?.PcbIp, "PCB", nics),
+            BindAddress.RejectReason(_current?.LmIp, "LM", nics),
+        }.Where(r => r is not null).ToList();
+        if (reasons.Count == 0) return false;
+        Warn(string.Join(Environment.NewLine + Environment.NewLine, reasons!));
         return true;
     }
 
@@ -641,10 +655,19 @@ public partial class MainWindow : Window
         MessageBox.Show(this, message, "EXVS2 Launcher", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
+    private void SetStage(string text)
+    {
+        StageText.Text = text;
+        StageText.ToolTip = text;
+    }
+
     private void Log(string message)
     {
-        var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
         if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(() => Log(message)); return; }
+        if (string.Equals(message, _lastLogBody, StringComparison.Ordinal))
+            return;
+        _lastLogBody = message;
+        var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
         LogBox.AppendText(line + Environment.NewLine);
         LogBox.ScrollToEnd();
         try { File.AppendAllText(_logFile, $"{DateTime.Now:yyyy-MM-dd} {line}{Environment.NewLine}"); } catch { }

@@ -14,7 +14,7 @@ This repo is a from-scratch replacement for the *launcher / orchestrator* layer:
 
 ## Status
 
-Private preview, **v0.2.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+Private preview, **v0.2.1 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
 
 - **Correct start order.** Starts the patched card server you pick (`Server-Infinite.exe` or `3-Start-Server.bat`),
   waits until `127.0.0.1:28080` accepts connections, then starts the LM (`vsac29_Release_LM.exe`, optional) and the
@@ -35,7 +35,7 @@ Private preview, **v0.2.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
   an explicit LM IP (with auto-detect off) can change it, and the log shows a before/after diff. If SnowLauncher.ini is
   synced, `LM_IpAddress` is updated to match lmnfig, not the PCB IP. Sharing one address is fine for a single cab; a
   separate LM address is recommended when more than one cab or LM runs on the same PC.
-  `127.0.0.1` is never accepted as an LM IP. Virtual adapters (Radmin,
+  `127.0.0.1`, `0.0.0.0`, link-local `169.254.x`, and addresses not on a local adapter are rejected. Virtual adapters (Radmin,
   TAP/n2n, Hyper-V...) are listed but never auto-picked over a real one.
 - **Card server version.** The path's folder name (for example `exvs2-matchmaking-v0.4.1-pre`) or a `BUILD_COMMIT`
   file is shown in the UI and the start log. A warning appears if it looks like a pre-release older than v0.4.0.
@@ -44,6 +44,12 @@ Private preview, **v0.2.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
   folder — never a process from another cab folder. **Stop all** still closes all three for this profile.
 - **Hover tooltips.** Every setting and button has a short-delay tooltip in beginner-friendly English (text lives in
   `src/Exvs2Launcher.App/Resources/Tooltips.xaml` so it can be translated later).
+- **High-DPI tooltips and notes wrap.** Tooltips wrap at 420 DIP, stay open for 30 seconds, and the app is
+  per-monitor DPI aware (PerMonitorV2) so text stays crisp at scales like 175% on a 4K display.
+- **Renamed patched card servers are recognized.** A process named `Server` is treated as patched when its folder
+  has a `BUILD_COMMIT` (or is named like `mm-server2`), and is reused on Start all. Only the pack's
+  `server\Server.exe` is called stock. The same message is not logged twice on repeated clicks. The status label
+  shows why a start or Check port failed.
 - **First-run wizard.** Opens when there are no profiles, or from **New**. Seven pages: game folder (checks the
   game exe, LM exe, `bngrw.dll`, and ini files), card (keep a valid existing one or generate a new one, values
   masked), unique serial, network (only-cab vs multi-cab, secondary-IP PowerShell with `-SkipAsSource`, never offers
@@ -54,9 +60,10 @@ Private preview, **v0.2.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
   **Save** or **Save and Start**.
 - **Troubleshooting.** A button with plain-English notes for 21-01, card in use / このカードは使用中です, a missing
   card server, and firewall blocks.
-- **Loopback LM IP is rejected.** The main UI and the wizard refuse `127.0.0.1` (and other loopback addresses) for
-  the LM, because the game cannot reach an LM bound there from a LAN address (error 21-01). A loopback value already
-  in `lmnfig.ini` is not kept as authoritative.
+- **Unusable LM and PCB IPs are rejected.** The main UI and the wizard refuse `127.0.0.1`, `0.0.0.0`, link-local
+  `169.254.x`, and any address not assigned to a local adapter. The LM hook needs an address that exists on an
+  adapter or it fails with "failed to find interface". Dropdowns only list real adapter addresses. A bad value
+  already in `lmnfig.ini` is not kept as authoritative.
 - **One profile per game folder**, saved as `exvs2-launcher.profiles.json` next to the exe (no card values in it).
 - Refuses to write files or start while SnowLauncher or the game is running.
 

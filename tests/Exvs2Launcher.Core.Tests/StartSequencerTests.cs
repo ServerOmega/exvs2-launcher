@@ -148,7 +148,8 @@ public class StartSequencerTests
         var r = await seq.RunAsync(Plan());
         Assert.True(r.Succeeded);
         Assert.DoesNotContain(w.Events, e => e.StartsWith("start:Card server"));
-        Assert.Contains("already listening", log);
+        Assert.Contains("patched card server", log);
+        Assert.Contains("Using it", log);
         Assert.Contains("pid 77", log);
     }
 
@@ -282,15 +283,73 @@ public class StartSequencerTests
     [Theory]
     [InlineData("Server-Infinite", null, PortOwnerKind.PatchedServer)]
     [InlineData("server-infinite", null, PortOwnerKind.PatchedServer)]
-    [InlineData("Server", null, PortOwnerKind.StockServer)]
+    [InlineData("Server", null, PortOwnerKind.Unknown)]
     [InlineData("MyRenamedServer", "/mm/server/MyRenamedServer.exe", PortOwnerKind.PatchedServer)]
     [InlineData("svchost", null, PortOwnerKind.Other)]
     public void Classifier(string name, string? path, PortOwnerKind expected)
     {
         var plan = new StartPlan { GameFolder = Game, CardServerPath = "/mm/server/MyRenamedServer.exe" };
-        Assert.Equal(expected, PortOwnerClassifier.Classify(true, new PortOwner(1, name, path), plan));
+        Assert.Equal(expected, PortOwnerClassifier.Classify(true, new PortOwner(1, name, path), plan, _ => false));
         Assert.Equal(PortOwnerKind.None, PortOwnerClassifier.Classify(false, null, plan));
         Assert.Equal(PortOwnerKind.Unknown, PortOwnerClassifier.Classify(true, null, plan));
+    }
+
+    [Fact]
+    public void Renamed_Server_exe_with_BUILD_COMMIT_is_patched_not_stock()
+    {
+        using var dir = new TempDir();
+        var exe = Path.Combine(dir.Root, "Server.exe");
+        File.WriteAllBytes(exe, new byte[] { 0x4D, 0x5A });
+        File.WriteAllText(Path.Combine(dir.Root, "BUILD_COMMIT"), "16d6002\n");
+        var plan = new StartPlan { GameFolder = Game, CardServerPath = Path.Combine(Game, "somewhere", "3-Start-Server.bat") };
+        var owner = new PortOwner(484, "Server", exe);
+        Assert.Equal(PortOwnerKind.PatchedServer, PortOwnerClassifier.Classify(true, owner, plan));
+        var msg = PortOwnerClassifier.Describe(PortOwnerKind.PatchedServer, 28080, owner);
+        Assert.Contains("patched card server", msg);
+        Assert.Contains(exe, msg);
+        Assert.Contains("pid 484", msg);
+        Assert.Contains("Untick Card server", msg);
+        Assert.DoesNotContain("stock", msg, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Mm_server_folder_name_is_enough_to_treat_Server_exe_as_patched()
+    {
+        var exe = Path.Combine("/games", "mm-server2", "Server.exe");
+        var plan = new StartPlan { GameFolder = Game };
+        var owner = new PortOwner(484, "Server", exe);
+        Assert.Equal(PortOwnerKind.PatchedServer, PortOwnerClassifier.Classify(true, owner, plan, _ => false));
+    }
+
+    [Fact]
+    public void Pack_stock_server_path_is_still_stock()
+    {
+        var stock = Path.Combine(Game, "server", "Server.exe");
+        var plan = new StartPlan { GameFolder = Game };
+        var owner = new PortOwner(55, "Server", stock);
+        Assert.Equal(PortOwnerKind.StockServer, PortOwnerClassifier.Classify(true, owner, plan, _ => false));
+        var msg = PortOwnerClassifier.Describe(PortOwnerKind.StockServer, 28080, owner);
+        Assert.Contains("stock card server", msg);
+        Assert.Contains("pid 55", msg);
+    }
+
+    [Fact]
+    public async Task Renamed_patched_server_already_on_port_is_reused()
+    {
+        using var dir = new TempDir();
+        var exe = Path.Combine(dir.Root, "Server.exe");
+        File.WriteAllBytes(exe, new byte[] { 0x4D, 0x5A });
+        File.WriteAllText(Path.Combine(dir.Root, "BUILD_COMMIT"), "16d6002\n");
+        var (seq, w) = Make(x => { x.Listening = true; x.Owner = new PortOwner(484, "Server", exe); });
+        string log = "";
+        seq.Log += m => log += m + "\n";
+        var r = await seq.RunAsync(Plan());
+        Assert.True(r.Succeeded, r.Message);
+        Assert.DoesNotContain(w.Events, e => e.StartsWith("start:Card server"));
+        Assert.Contains("patched card server", log);
+        Assert.Contains("Using it", log);
+        Assert.DoesNotContain("stock", log, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Client", r.Started.Select(p => p.Role));
     }
 
     [Fact]

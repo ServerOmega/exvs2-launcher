@@ -9,6 +9,7 @@ public sealed class GameFolder
     public const string LmIniName = "lmnfig.ini";
     public const string CardIniName = "card.ini";
     public const string SnowLauncherIniName = "SnowLauncher.ini";
+    public const string BngrwDllName = "bngrw.dll";
 
     public GameFolder(string root) => Root = Path.GetFullPath(root);
 
@@ -19,6 +20,7 @@ public sealed class GameFolder
     public string LmIni => Path.Combine(Root, LmIniName);
     public string CardIni => Path.Combine(Root, CardIniName);
     public string SnowLauncherIni => Path.Combine(Root, SnowLauncherIniName);
+    public string BngrwDll => Path.Combine(Root, BngrwDllName);
     /// <summary>The pack's stock card server. The launcher never starts it.</summary>
     public string StockServerExe => Path.Combine(Root, "server", "Server.exe");
 

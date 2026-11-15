@@ -1,0 +1,167 @@
+<Window x:Class="Exvs2Launcher.App.WizardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EXVS2 Launcher setup" Width="740" Height="620"
+        MinWidth="640" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        ToolTipService.InitialShowDelay="700"
+        ToolTipService.ShowDuration="20000">
+  <DockPanel Margin="14">
+    <TextBlock DockPanel.Dock="Top" x:Name="StepTitle" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,2" Text="Game folder" />
+    <TextBlock DockPanel.Dock="Top" x:Name="StepSubtitle" Foreground="Gray" Margin="0,0,0,10" Text="Step 1 of 7" />
+
+    <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
+      <Grid>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+          <Button x:Name="BackButton" Content="Back" Click="Back_Click" IsEnabled="False" ToolTip="{StaticResource Tip.WizardBack}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Button Content="Cancel" Click="Cancel_Click" ToolTip="{StaticResource Tip.WizardCancel}" />
+          <Button x:Name="NextButton" Content="Next" Click="Next_Click" IsDefault="True" FontWeight="SemiBold" ToolTip="{StaticResource Tip.WizardNext}" />
+          <Button x:Name="SaveButton" Content="Save" Click="Save_Click" Visibility="Collapsed" ToolTip="{StaticResource Tip.WizardSave}" />
+          <Button x:Name="SaveStartButton" Content="Save and Start" Click="SaveStart_Click" Visibility="Collapsed" FontWeight="SemiBold" ToolTip="{StaticResource Tip.WizardSaveStart}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <TextBlock DockPanel.Dock="Bottom" x:Name="StatusText" TextWrapping="Wrap" Margin="0,8,0,0" Foreground="#FF9A3412" />
+
+    <!-- 1. Game folder -->
+    <Grid x:Name="PageFolder" Visibility="Visible">
+      <StackPanel>
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="Pick the cabinet folder that has the game exe, the Live Monitor exe, bngrw.dll, config.ini and lmnfig.ini." />
+        <Label Content="Profile name" ToolTip="{StaticResource Tip.Name}" />
+        <TextBox x:Name="NameBox" ToolTip="{StaticResource Tip.Name}" />
+        <Label Content="Game folder" ToolTip="{StaticResource Tip.GameFolder}" />
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseFolder_Click" ToolTip="{StaticResource Tip.GameFolderBrowse}" />
+          <TextBox x:Name="FolderBox" ToolTip="{StaticResource Tip.GameFolder}" LostFocus="FolderBox_LostFocus" />
+        </DockPanel>
+        <Border Margin="0,12,0,0" Padding="10" Background="#FFF8FAFC" BorderBrush="#FFCBD5E1" BorderThickness="1" CornerRadius="3">
+          <TextBlock x:Name="FolderStatus" TextWrapping="Wrap" Text="No folder selected yet." />
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- 2. Card -->
+    <Grid x:Name="PageCard" Visibility="Collapsed">
+      <StackPanel>
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="A card is the emulated Banapass in card.ini. The numbers stay masked here. Never share them." />
+        <RadioButton x:Name="KeepCardRadio" Content="Keep the existing card" GroupName="CardChoice" IsChecked="True"
+                     Checked="CardChoice_Changed" ToolTip="{StaticResource Tip.WizardKeepCard}" />
+        <RadioButton x:Name="NewCardRadio" Content="Generate a new card" GroupName="CardChoice"
+                     Checked="CardChoice_Changed" Margin="0,6,0,0" ToolTip="{StaticResource Tip.NewCard}" />
+        <Button Content="Generate now" HorizontalAlignment="Left" Margin="0,8,0,0" Click="GenerateCard_Click"
+                ToolTip="{StaticResource Tip.NewCard}" />
+        <Border Margin="0,12,0,0" Padding="10" Background="#FFF8FAFC" BorderBrush="#FFCBD5E1" BorderThickness="1" CornerRadius="3">
+          <TextBlock x:Name="CardStatus" TextWrapping="Wrap" Text="" />
+        </Border>
+        <TextBlock Margin="0,10,0,0" FontWeight="SemiBold" TextWrapping="Wrap"
+                   Text="Never share the access code or chip ID. Anyone with them can use your card." />
+      </StackPanel>
+    </Grid>
+
+    <!-- 3. Serial -->
+    <Grid x:Name="PageSerial" Visibility="Collapsed">
+      <StackPanel>
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="Every cab needs a unique 4-character serial. A new profile gets one automatically. If this folder already has a unique serial, it is kept." />
+        <Label Content="Serial" ToolTip="{StaticResource Tip.Serial}" />
+        <DockPanel>
+          <Button DockPanel.Dock="Right" Content="Generate a different one" Click="RegenSerial_Click" ToolTip="{StaticResource Tip.NewSerial}" />
+          <TextBox x:Name="SerialBox" IsReadOnly="True" FontFamily="Consolas" FontSize="16" ToolTip="{StaticResource Tip.Serial}" />
+        </DockPanel>
+        <Border Margin="0,12,0,0" Padding="10" Background="#FFF8FAFC" BorderBrush="#FFCBD5E1" BorderThickness="1" CornerRadius="3">
+          <TextBlock x:Name="SerialStatus" TextWrapping="Wrap" Text="" />
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- 4. Network -->
+    <Grid x:Name="PageNetwork" Visibility="Collapsed">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                     Text="The game (PCB) and the Live Monitor each need an IPv4 address on this PC. 127.0.0.1 is never used for the LM — that address only works on this PC and causes error 21-01." />
+          <TextBlock x:Name="NicListText" TextWrapping="Wrap" Margin="0,0,0,8" FontFamily="Consolas" FontSize="12" />
+          <Label Content="PCB (client) IP" ToolTip="{StaticResource Tip.PcbIp}" />
+          <ComboBox x:Name="PcbIpBox" IsEditable="True" SelectionChanged="NetworkChoice_Changed" LostFocus="NetworkChoice_Changed"
+                    ToolTip="{StaticResource Tip.PcbIp}" />
+          <TextBlock Margin="0,10,0,4" Text="Is this the only cab on this PC?" FontWeight="SemiBold" />
+          <RadioButton x:Name="OnlyCabYes" Content="Yes — the LM may share the cab's IP" GroupName="OnlyCab" IsChecked="True"
+                       Checked="NetworkChoice_Changed" ToolTip="{StaticResource Tip.WizardOnlyCab}" />
+          <RadioButton x:Name="OnlyCabNo" Content="No — I run more than one cab or LM on this PC" GroupName="OnlyCab"
+                       Checked="NetworkChoice_Changed" Margin="0,4,0,0" ToolTip="{StaticResource Tip.WizardMultiCab}" />
+          <Label Content="LM IP" ToolTip="{StaticResource Tip.LmIp}" Margin="0,8,0,0" />
+          <ComboBox x:Name="LmIpBox" IsEditable="True" LostFocus="NetworkChoice_Changed"
+                    ToolTip="{StaticResource Tip.LmIp}" />
+          <Border Margin="0,12,0,0" Padding="10" Background="#FFF8FAFC" BorderBrush="#FFCBD5E1" BorderThickness="1" CornerRadius="3">
+            <StackPanel>
+              <TextBlock x:Name="NetworkStatus" TextWrapping="Wrap" Text="" />
+              <TextBox x:Name="CommandBox" Margin="0,8,0,0" IsReadOnly="True" FontFamily="Consolas" FontSize="12"
+                       TextWrapping="Wrap" Visibility="Collapsed"
+                       ToolTip="{StaticResource Tip.WizardAddIpCommand}" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- 5. Card server -->
+    <Grid x:Name="PageServer" Visibility="Collapsed">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                     Text="Point the launcher at a current matchmaking package (v0.4.0 or later), then enter the matchmaker address and the online tag secret from the host." />
+          <Label Content="Card server" ToolTip="{StaticResource Tip.CardServerPath}" />
+          <DockPanel>
+            <Button DockPanel.Dock="Right" Content="Browse…" Click="BrowseServer_Click" ToolTip="{StaticResource Tip.CardServerBrowse}" />
+            <TextBox x:Name="ServerPathBox" LostFocus="ServerPath_Changed" ToolTip="{StaticResource Tip.CardServerPath}" />
+          </DockPanel>
+          <TextBlock Margin="0,4,0,0">
+            <Hyperlink NavigateUri="https://github.com/ServerOmega/exvs2-matchmaking/releases" RequestNavigate="Link_RequestNavigate">
+              Download the latest release
+            </Hyperlink>
+          </TextBlock>
+          <TextBlock x:Name="ServerVersionText" TextWrapping="Wrap" Margin="0,8,0,0" />
+          <Label Content="Matchmaker address" Margin="0,8,0,0" ToolTip="{StaticResource Tip.WizardMatchUrl}" />
+          <TextBox x:Name="MatchUrlBox" ToolTip="{StaticResource Tip.WizardMatchUrl}" />
+          <Label Content="Online tag secret" Margin="0,8,0,0" ToolTip="{StaticResource Tip.WizardTagSecret}" />
+          <PasswordBox x:Name="TagSecretBox" ToolTip="{StaticResource Tip.WizardTagSecret}" />
+          <TextBlock x:Name="SecretStatus" Foreground="Gray" Margin="0,4,0,0" TextWrapping="Wrap" />
+          <TextBlock Margin="0,8,0,0" TextWrapping="Wrap">
+            The secret is stored only in the card server's Configurations/server.json and is never logged.
+            <Hyperlink NavigateUri="https://github.com/ServerOmega/exvs2-matchmaking/blob/main/docs/SETUP.md#a8-online-tag-shared-secret-tagsecret" RequestNavigate="Link_RequestNavigate">
+              Where hosts find it (setup guide section A8)
+            </Hyperlink>
+          </TextBlock>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- 6. Checks -->
+    <Grid x:Name="PageChecks" Visibility="Collapsed">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="These checks do not change firewall rules. If a card server is already running on the port, it is left running. A test start is stopped afterwards, and only the process this wizard started is stopped." />
+        <Button DockPanel.Dock="Top" Content="Run checks" HorizontalAlignment="Left" Click="RunChecks_Click"
+                ToolTip="{StaticResource Tip.WizardRunChecks}" />
+        <TextBox x:Name="ChecksBox" Margin="0,10,0,0" IsReadOnly="True" TextWrapping="Wrap"
+                 FontFamily="Consolas" FontSize="12" VerticalScrollBarVisibility="Auto"
+                 AcceptsReturn="True" />
+      </DockPanel>
+    </Grid>
+
+    <!-- 7. Summary -->
+    <Grid x:Name="PageSummary" Visibility="Collapsed">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+                   Text="These are the files that will change. A timestamped .bak is made before any existing file is overwritten. Cancel leaves everything as it is." />
+        <TextBox x:Name="SummaryBox" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="12"
+                 VerticalScrollBarVisibility="Auto" AcceptsReturn="True" />
+      </DockPanel>
+    </Grid>
+  </DockPanel>
+</Window>

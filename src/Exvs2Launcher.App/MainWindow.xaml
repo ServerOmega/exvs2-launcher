@@ -15,6 +15,7 @@
       <Button Content="New" Click="NewProfile_Click" ToolTip="{StaticResource Tip.ProfileNew}" />
       <Button Content="Delete" Click="DeleteProfile_Click" ToolTip="{StaticResource Tip.ProfileDelete}" />
       <Button Content="Save" Click="Save_Click" ToolTip="{StaticResource Tip.ProfileSave}" />
+      <Button Content="Troubleshooting" Click="Troubleshooting_Click" ToolTip="{StaticResource Tip.Troubleshooting}" />
       <TextBlock x:Name="StoreText" VerticalAlignment="Center" Foreground="Gray" Margin="6,0,0,0"
                  TextTrimming="CharacterEllipsis" ToolTip="{StaticResource Tip.ProfileStore}" />
     </StackPanel>

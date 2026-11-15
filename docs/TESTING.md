@@ -1,4 +1,4 @@
-# Testing the v0.1.1 MVP
+# Testing the v0.2.0 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -10,21 +10,37 @@ Use `Exvs2Launcher.exe` from the self-contained build (no .NET install needed) o
 `exvs2-launcher.profiles.json` and `exvs2-launcher.log` next to itself. Hover any setting or button for a short
 delay to read what it does.
 
-## 1. Profile
+## 1. First-run wizard (or New)
 
-1. Open it. A first-run "Test cab" profile is created and given a random unique serial automatically (nothing is
-   written to a game folder until you pick one).
-2. Game folder → Browse → the cab folder (for example `...\Mobile_Suit_Gundam_Extreme_Vs._2_Infinite_Boost\Test`).
-   The Identity box shows the current serial and "Card present (values hidden)". If the folder already has a unique
-   serial, the profile adopts it and the folder is not rewritten. A new serial is written only when the folder has
-   no serial, or when that serial is already used by another profile (the log says so).
-3. Patched card server → Browse → a **current** matchmaking package (`3-Start-Server.bat` or `Server-Infinite.exe`
-   from v0.4.0-pre or later). The version is shown under the path. Picking the pack's `server\Server.exe` is refused,
-   and an early package such as v0.1.0-pre shows a warning.
-4. Tick Card server and Client (and LM if this cab hosts the LM). Save.
+1. Open a fresh copy (no `exvs2-launcher.profiles.json` next to it), or click **New**. The setup wizard should open.
+   Cancel leaves no profile; click **New** to open it again.
+2. **Game folder** → Browse → the cab folder (for example
+   `...\Mobile_Suit_Gundam_Extreme_Vs._2_Infinite_Boost\Test`). The page checks for `vsac29_Release.exe`,
+   `vsac29_Release_LM.exe`, `bngrw.dll`, `config.ini`, and `lmnfig.ini`. A folder already used by another profile
+   shows a warning, not a hard stop.
+3. **Card** — a valid existing `card.ini` is kept (values stay masked). Otherwise generate a new one with one click.
+   You should see a "never share this" note, never the raw numbers.
+4. **Serial** — generated automatically, or adopted from the folder if it is unique. Another profile using the same
+   serial should force a new one.
+5. **Network** — local IPv4 addresses are listed and the PCB IP is filled in. "Only cab on this PC?" Yes: the LM may
+   share the cab IP. No: pick a second address; if the adapter has only one IPv4, a one-line elevated PowerShell
+   command (`New-NetIPAddress ... -SkipAsSource $true`) is shown, and is not run for you. Typing `127.0.0.1` for the
+   LM is rejected.
+6. **Card server** — pick `3-Start-Server.bat` or `Server-Infinite.exe` from v0.4.0-pre or later. The version is
+   shown; an early package such as v0.1.0-pre warns. The releases link and setup guide section A8 are offered. Enter
+   the matchmaker address and (if needed) the online tag secret. The secret is masked and must never appear in the
+   log; it is written only to `Configurations/server.json`.
+7. **Checks** — Run checks. An already-running patched card server is left running; a test-started process is
+   stopped afterwards. The matchmaker HTTP check should report a status code if the host answers. Firewall advice
+   lists the exact exes to allow and does not change any rules.
+8. **Summary** — every file that will change is listed, with backups. **Save** writes and returns to the main
+   window; **Save and Start** also starts in the usual order.
 
-Expected: no game file changes when the folder already has a unique serial; the profiles JSON appears next to the
-exe and has no card values in it.
+Expected: the profiles JSON appears next to the exe and has no card values or tag secret in it. Game files that
+already had a unique serial and a valid card are not rewritten unless you asked for a new card/serial or a new IP.
+
+The main window still has Browse / Save for an existing profile. **Troubleshooting** explains 21-01, card in use /
+このカードは使用中です, a missing card server, and firewall blocks.
 
 ## 2. Check port
 
@@ -55,6 +71,9 @@ server Server-Infinite (pid ...)". With SnowLauncher's stock server open: "STOCK
 4. Sharing one address is fine for a single cab. A note appears if they match. Use a separate LM address when more
    than one cab or LM runs on this PC. If the LM is pinned to the same specific address the game uses, you can get
    error 21-01 (live monitor disconnect).
+5. `127.0.0.1` (or any loopback address) is rejected as an LM IP in both the main window and the wizard, including
+   Write IPs and Start. If `lmnfig.ini` already has `127.0.0.1`, a red warning appears and that value is not kept as
+   authoritative — pick a LAN address instead.
 
 ## 5. Start and stop
 
@@ -71,12 +90,12 @@ server Server-Infinite (pid ...)". With SnowLauncher's stock server open: "STOCK
 Please report: anything in the log that looks wrong, whether the game boots and reaches the card screen, whether
 LM/client need a longer "LM → client delay", and whether the PCB and LM IPs it used are the ones you expected.
 
-## Known gaps in v0.1.1
+## Known gaps in v0.2.0
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.
-- The launcher cannot add a second LAN IP for you; pick one that already exists on the adapter.
-- No first-run wizard, battleMode editor, input bindings, resolution, MatchUrl / tag-secret editing, or firewall
-  helpers yet.
+- The launcher cannot add a second LAN IP for you; the wizard shows the PowerShell command, but you still have to
+  run it in an elevated window.
+- No battleMode editor, input bindings, or resolution helpers yet.
 - If "Server" is the card server's process name, the launcher treats it as the stock server.
 - The launcher log is plain text next to the exe; it never contains card values or secrets.

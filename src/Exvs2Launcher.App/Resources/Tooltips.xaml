@@ -8,7 +8,7 @@
   -->
 
   <sys:String x:Key="Tip.Profile">A cab profile is one game folder (one cabinet). You can keep a separate profile for your Test folder, your main cab, or P2–P4.</sys:String>
-  <sys:String x:Key="Tip.ProfileNew">Create a new profile. It gets a random unique serial automatically. If you later pick a game folder that already has its own unique serial, that serial is kept and the folder is not changed.</sys:String>
+  <sys:String x:Key="Tip.ProfileNew">Open the setup wizard to create a new cab profile. It walks through the game folder, card, unique serial, network, card server, and checks. A new profile gets a random unique serial automatically. If the folder already has its own unique serial, that serial is kept.</sys:String>
   <sys:String x:Key="Tip.ProfileDelete">Remove this profile from the list. The game folder and its files are not deleted.</sys:String>
   <sys:String x:Key="Tip.ProfileSave">Save all profiles to the JSON file next to this launcher. Card values are never stored there.</sys:String>
   <sys:String x:Key="Tip.ProfileStore">Where your profiles are saved on this PC.</sys:String>
@@ -49,8 +49,23 @@
   <sys:String x:Key="Tip.AutoDetectIp">On every Start (all), fill the PCB (client) IP with this PC's LAN address. This never changes the LM IP — lmnfig.ini is the authority for the Live Monitor.</sys:String>
   <sys:String x:Key="Tip.DetectNow">Fill the PCB (client) IP with this PC's current LAN address now. The LM IP is left as it is.</sys:String>
   <sys:String x:Key="Tip.PcbIp">The address the game (the cab / PCB) uses, written to config.ini IpAddress. This is usually your PC's main LAN IP, for example 192.168.1.69. The game binds its ports on this address.</sys:String>
-  <sys:String x:Key="Tip.LmIp">The address the Live Monitor uses, written to lmnfig.ini IpAddress. For one cab this can be the same as the PCB IP. If you run more than one cab or LM on this PC, pick a separate address on the same adapter (a secondary IPv4, for example 192.168.1.245). If the LM is pinned to the same specific address the game uses, you can get error 21-01 (live monitor disconnect). The list includes every local IPv4 address, including secondary ones. Auto-detect will not overwrite this.</sys:String>
+  <sys:String x:Key="Tip.LmIp">The address the Live Monitor uses, written to lmnfig.ini IpAddress. For one cab this can be the same as the PCB IP. If you run more than one cab or LM on this PC, pick a separate address on the same adapter (a secondary IPv4, for example 192.168.1.245). If the LM is pinned to the same specific address the game uses, you can get error 21-01 (live monitor disconnect). Never use 127.0.0.1 here — the game cannot reach an LM bound to loopback from a LAN address, which causes error 21-01. The list includes every local IPv4 address, including secondary ones. Auto-detect will not overwrite this.</sys:String>
   <sys:String x:Key="Tip.WriteIps">Write the PCB IP to config.ini and the LM IP to lmnfig.ini (and to SnowLauncher.ini if that option is on). The log shows a before-and-after diff. A backup is made if a file changes. Close SnowLauncher and the game first.</sys:String>
   <sys:String x:Key="Tip.CurrentIps">The addresses currently stored in the game files. config.ini is the PCB (client). lmnfig.ini is the LM and is authoritative — auto-detect will not change it.</sys:String>
+  <sys:String x:Key="Tip.Troubleshooting">Plain-English notes for common errors: 21-01 (LM disconnect), card in use / このカードは使用中です, a missing card server, and firewall or TinyWall blocks.</sys:String>
+
+  <sys:String x:Key="Tip.WizardBack">Go back to the previous setup step. Nothing is written until you click Save.</sys:String>
+  <sys:String x:Key="Tip.WizardNext">Continue to the next setup step. Nothing is written until you click Save on the last page.</sys:String>
+  <sys:String x:Key="Tip.WizardCancel">Close the wizard without writing game files or saving a new profile.</sys:String>
+  <sys:String x:Key="Tip.WizardSave">Write the planned file changes (with backups) and save this profile. The game is not started.</sys:String>
+  <sys:String x:Key="Tip.WizardSaveStart">Write the planned file changes (with backups), save this profile, and start the card server, LM, and game in order.</sys:String>
+  <sys:String x:Key="Tip.WizardKeepCard">Leave the existing valid card.ini alone. The access code and chip ID stay hidden and are never logged.</sys:String>
+  <sys:String x:Key="Tip.WizardOnlyCab">This PC will run only one cab and one LM. They may share one IPv4 address. That is fine for a single-cab setup.</sys:String>
+  <sys:String x:Key="Tip.WizardMultiCab">This PC will run more than one cab or LM. Give the LM its own IPv4 on the same adapter (a secondary address). If none exists, the wizard shows a one-line elevated PowerShell command to add one. It does not run that command for you.</sys:String>
+  <sys:String x:Key="Tip.WizardAddIpCommand">Elevated PowerShell that adds a secondary IPv4 with -SkipAsSource, so Windows does not use the LM address as the default outbound IP. Copy and run it in an administrator PowerShell window; the launcher never runs it.</sys:String>
+  <sys:String x:Key="Tip.WizardMatchUrl">The public address of the matchmaking server, for example 203.0.113.10:28080 or http://host:28080/match. This is written to the card server's Configurations/server.json as MatchUrl (and StunHost). Do not use 127.0.0.1.</sys:String>
+  <sys:String x:Key="Tip.WizardTagSecret">The online tag shared secret from the matchmaker host (setup guide section A8). It is stored only in the card server's Configurations/server.json and is never shown or logged. Leave this empty to keep an already-set secret.</sys:String>
+  <sys:String x:Key="Tip.WizardRunChecks">Test the card server port, try to reach the matchmaker over HTTP, and list the exact programs to allow in TinyWall or Windows Firewall. The launcher never changes firewall rules. An already-running patched card server is left running; a test-started process is stopped afterwards.</sys:String>
+
   <sys:String x:Key="Tip.Log">A running log of what the launcher did. Card values and secrets are never written here. A copy is also saved as exvs2-launcher.log next to the exe.</sys:String>
 </ResourceDictionary>

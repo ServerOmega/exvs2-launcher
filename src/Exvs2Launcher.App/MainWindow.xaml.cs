@@ -8,6 +8,7 @@ using Exvs2Launcher.Core.Identity;
 using Exvs2Launcher.Core.Launch;
 using Exvs2Launcher.Core.Net;
 using Exvs2Launcher.Core.Profiles;
+using Exvs2Launcher.Core.Wizard;
 using Microsoft.Win32;
 
 namespace Exvs2Launcher.App;
@@ -20,6 +21,7 @@ public partial class MainWindow : Window
     private readonly IdentityGenerator _ids = new();
     private readonly WindowsPortOwnerLookup _owners = new();
     private readonly TcpPortProbe _probe = new();
+    private readonly IProcessStarter _starter;
     private readonly CabLauncher _launcher;
     private readonly string _logFile;
     private ProfileFile _file = new();
@@ -34,7 +36,8 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _logFile = Path.Combine(Path.GetDirectoryName(_store.FilePath)!, "exvs2-launcher.log");
-        var seq = new StartSequencer(new SystemProcessStarter(), _probe, _owners, new RealDelay());
+        _starter = new SystemProcessStarter();
+        var seq = new StartSequencer(_starter, _probe, _owners, new RealDelay());
         seq.Log += Log;
         seq.StageChanged += s => Dispatcher.Invoke(() => StageText.Text = s.ToString());
         _launcher = new CabLauncher(seq, _writer);
@@ -43,17 +46,13 @@ public partial class MainWindow : Window
         StoreText.Text = "Profiles: " + _store.FilePath;
         try { _file = _store.Load(); }
         catch (Exception ex) { Log("Could not read profiles (" + ex.Message + "). Starting with an empty list."); }
-        if (_file.Profiles.Count == 0)
-        {
-            var first = new LauncherProfile { Name = "Test cab" };
-            _file.Profiles.Add(first);
-            var assigned = SerialAssignment.ForNewProfile(_file, first, _ids, _writer);
-            Log(assigned.Message);
-            try { _store.Save(_file); } catch (Exception ex) { Log("Could not save the first-run profile: " + ex.Message); }
-        }
-        RefreshProfileBox(_file.Profiles.FirstOrDefault(p => p.Name == _file.LastSelected) ?? _file.Profiles[0]);
+        if (_file.Profiles.Count > 0)
+            RefreshProfileBox(_file.Profiles.FirstOrDefault(p => p.Name == _file.LastSelected) ?? _file.Profiles[0]);
+        else
+            ShowNoProfile();
         FillNics();
         Log("EXVS2 Launcher " + typeof(MainWindow).Assembly.GetName().Version + " ready. Card values are never shown or logged.");
+        Loaded += MainWindow_Loaded;
         _statusTimer.Tick += (_, _) => RefreshComponentStatus();
         _statusTimer.Start();
         RefreshComponentStatus();
@@ -127,6 +126,7 @@ public partial class MainWindow : Window
     private bool SaveAll(bool quiet = false)
     {
         if (!ReadForm()) return false;
+        if (RejectLoopbackLm(_current!.LmIp)) return false;
         var dupFolder = _file.Profiles.Where(p => !ReferenceEquals(p, _current) && !string.IsNullOrWhiteSpace(p.GameFolder))
             .FirstOrDefault(p => ReferenceEquals(ProfileStore.FindByFolder(new ProfileFile { Profiles = { p } }, _current!.GameFolder), p));
         if (dupFolder is not null) { Warn($"Profile \"{dupFolder.Name}\" already uses this game folder. Use one profile per folder."); return false; }
@@ -158,7 +158,12 @@ public partial class MainWindow : Window
             CardText.Text = !s.CardPresent ? "No card in card.ini" : s.CardValid ? "Card present (values hidden)" : "Card present but not in the expected format";
             CurrentIpText.Text = $"In the files now: config.ini IpAddress={s.ClientIp ?? "-"} (PCB), lmnfig.ini IpAddress={s.LmIp ?? "-"} (LM; authoritative), Server={s.ClientServer ?? "-"}";
             CurrentIpText.Foreground = System.Windows.Media.Brushes.Gray;
-            if (NetworkBinding.SameIp(s.ClientIp, s.LmIp) && s.ClientIp is not null)
+            if (LoopbackAddress.IsLoopback(s.LmIp))
+            {
+                CurrentIpText.Text += "  " + LoopbackAddress.LmRejected;
+                CurrentIpText.Foreground = System.Windows.Media.Brushes.DarkRed;
+            }
+            else if (NetworkBinding.SameIp(s.ClientIp, s.LmIp) && s.ClientIp is not null)
             {
                 CurrentIpText.Text += "  Note: PCB and LM share this address, which is fine for a single cab. Use a separate LM address if you run more than one cab or LM on this PC.";
             }
@@ -185,12 +190,53 @@ public partial class MainWindow : Window
 
     private void NewProfile_Click(object sender, RoutedEventArgs e)
     {
-        ReadForm();
-        var p = new LauncherProfile { Name = "Cab " + (_file.Profiles.Count + 1) };
-        _file.Profiles.Add(p);
-        var assigned = SerialAssignment.ForNewProfile(_file, p, _ids, _writer);
-        Log(assigned.Message);
-        RefreshProfileBox(p);
+        if (_current is not null) ReadForm();
+        OpenWizard(firstRun: false);
+    }
+
+    private void Troubleshooting_Click(object sender, RoutedEventArgs e)
+    {
+        new TroubleshootingWindow { Owner = this }.ShowDialog();
+    }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (_file.Profiles.Count == 0)
+            OpenWizard(firstRun: true);
+    }
+
+    private void OpenWizard(bool firstRun)
+    {
+        var wiz = new WizardWindow(_file, _store, _writer, _ids, _probe, _owners, _starter,
+            new WindowsEnvironmentProbe(), Log, this);
+        bool accepted = wiz.ShowDialog() == true;
+        var profile = accepted ? wiz.ResultProfile : null;
+        if (profile is not null)
+        {
+            RefreshProfileBox(profile);
+            if (wiz.ResultWrites is not null) Report("Setup wizard", wiz.ResultWrites);
+            if (wiz.StartNow) Dispatcher.BeginInvoke(new Action(() => Start_Click(this, new RoutedEventArgs())));
+        }
+        else if (_file.Profiles.Count == 0)
+        {
+            ShowNoProfile();
+            if (firstRun) Log("Setup wizard was cancelled. Click New to run it again.");
+        }
+    }
+
+    private void ShowNoProfile()
+    {
+        _loading = true;
+        _current = null;
+        ProfileBox.ItemsSource = null;
+        NameBox.Text = "";
+        GameFolderBox.Text = "";
+        ServerPathBox.Text = "";
+        SerialText.Text = "Click New to run the setup wizard and create a cab profile.";
+        CardText.Text = "";
+        CurrentIpText.Text = "";
+        _loading = false;
+        RefreshComponentStatus();
     }
 
     private void DeleteProfile_Click(object sender, RoutedEventArgs e)
@@ -199,13 +245,13 @@ public partial class MainWindow : Window
         if (MessageBox.Show(this, $"Delete the profile \"{_current.Name}\"? The game folder is not touched.", "Delete profile",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         _file.Profiles.Remove(_current);
+        _current = null;
         if (_file.Profiles.Count == 0)
         {
-            var first = new LauncherProfile { Name = "Test cab" };
-            _file.Profiles.Add(first);
-            Log(SerialAssignment.ForNewProfile(_file, first, _ids, _writer).Message);
+            ShowNoProfile();
+            try { _store.Save(_file); } catch (Exception ex) { Log("Could not save profiles: " + ex.Message); }
+            return;
         }
-        _current = null;
         RefreshProfileBox(_file.Profiles[0]);
         SaveAll();
     }
@@ -385,7 +431,9 @@ public partial class MainWindow : Window
             try
             {
                 var existing = _writer.Read(GameFolderBox.Text.Trim()).LmIp;
-                if (existing is not null && NetworkBinding.FindLocal(existing, nics) is not null)
+                if (LoopbackAddress.IsLoopback(existing))
+                    Log("lmnfig.ini has a loopback LM IP. " + LoopbackAddress.LmRejected + " It was not copied into the LM IP box.");
+                else if (existing is not null && NetworkBinding.FindLocal(existing, nics) is not null)
                 {
                     LmIpBox.Text = existing;
                     Log("LM IP filled from lmnfig.ini: " + existing + ".");
@@ -398,9 +446,10 @@ public partial class MainWindow : Window
     private void WriteIps_Click(object sender, RoutedEventArgs e)
     {
         if (!ReadForm() || !GameFilesWritable(out var folder)) return;
+        if (RejectLoopbackLm(_current!.LmIp)) return;
         try
         {
-            if (NetworkBinding.SameIp(_current!.PcbIp, _current.LmIp) && _current.PcbIp is not null)
+            if (NetworkBinding.SameIp(_current.PcbIp, _current.LmIp) && _current.PcbIp is not null)
                 Log(NetworkBinding.SameAddressNote);
             var r = _writer.ApplyNetwork(folder, _current.PcbIp, _current.LmIp, _current.ServerAddress, _current.SyncSnowLauncherIni);
             Report("IPs written", r);
@@ -578,6 +627,13 @@ public partial class MainWindow : Window
 
     private static string IpFrom(string text) => text.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
     private static string? NullIfBlank(string s) => string.IsNullOrWhiteSpace(s) ? null : s;
+
+    private bool RejectLoopbackLm(string? lm)
+    {
+        if (!LoopbackAddress.IsLoopback(lm)) return false;
+        Warn(LoopbackAddress.LmRejected);
+        return true;
+    }
 
     private void Warn(string message)
     {

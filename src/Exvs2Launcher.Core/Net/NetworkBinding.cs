@@ -47,7 +47,23 @@ public static class NetworkBinding
     {
         var messages = new List<string>();
         string? pcb = ResolvePcb(currentPcbIp, profilePcbIp, autoDetect, nics, messages);
+        if (LoopbackAddress.IsLoopback(currentLmIp))
+        {
+            messages.Add("lmnfig.ini currently has a loopback LM IP. " + LoopbackAddress.LmRejected + " That value will not be kept.");
+            currentLmIp = null;
+        }
+        if (LoopbackAddress.IsLoopback(profileLmIp))
+        {
+            messages.Add("The profile LM IP is loopback. " + LoopbackAddress.LmRejected);
+            profileLmIp = null;
+        }
         var (lm, kept) = ResolveLm(currentLmIp, profileLmIp, autoDetect, nics, messages);
+        if (LoopbackAddress.IsLoopback(lm))
+        {
+            messages.Add(LoopbackAddress.LmRejected);
+            lm = null;
+            kept = false;
+        }
 
         bool same = SameIp(pcb, lm);
         if (same)

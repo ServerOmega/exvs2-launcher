@@ -14,13 +14,13 @@ This repo is a from-scratch replacement for the *launcher / orchestrator* layer:
 
 ## Status
 
-Private preview, **v0.1.1 (MVP, branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+Private preview, **v0.2.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
 
 - **Correct start order.** Starts the patched card server you pick (`Server-Infinite.exe` or `3-Start-Server.bat`),
   waits until `127.0.0.1:28080` accepts connections, then starts the LM (`vsac29_Release_LM.exe`, optional) and the
   client (`vsac29_Release.exe`). It never starts the pack's stock `server\Server.exe`. If the port is already held it
   says by which program: the patched server is reused, the stock server or anything else is refused.
-- **Unique serial and new card.** A new profile (and the first-run profile) gets a random unique 4-character serial
+- **Unique serial and new card.** A new profile (and the first-run wizard) gets a random unique 4-character serial
   automatically, so you don't have to click a button. If the game folder already has a unique serial in `config.ini`,
   the profile adopts it and the folder is not changed. A new serial is written only when the folder has no serial, or
   when that serial is already used by another profile (logged). "New serial" is the only way to replace a unique
@@ -34,7 +34,8 @@ Private preview, **v0.1.1 (MVP, branch `mvp`)**: C# / .NET 8 + WPF. What it does
   The LM IP dropdown lists every local IPv4 address, including secondary addresses on the same adapter. "Write IPs" or
   an explicit LM IP (with auto-detect off) can change it, and the log shows a before/after diff. If SnowLauncher.ini is
   synced, `LM_IpAddress` is updated to match lmnfig, not the PCB IP. Sharing one address is fine for a single cab; a
-  separate LM address is recommended when more than one cab or LM runs on the same PC. Virtual adapters (Radmin,
+  separate LM address is recommended when more than one cab or LM runs on the same PC.
+  `127.0.0.1` is never accepted as an LM IP. Virtual adapters (Radmin,
   TAP/n2n, Hyper-V...) are listed but never auto-picked over a real one.
 - **Card server version.** The path's folder name (for example `exvs2-matchmaking-v0.4.1-pre`) or a `BUILD_COMMIT`
   file is shown in the UI and the start log. A warning appears if it looks like a pre-release older than v0.4.0.
@@ -43,6 +44,19 @@ Private preview, **v0.1.1 (MVP, branch `mvp`)**: C# / .NET 8 + WPF. What it does
   folder — never a process from another cab folder. **Stop all** still closes all three for this profile.
 - **Hover tooltips.** Every setting and button has a short-delay tooltip in beginner-friendly English (text lives in
   `src/Exvs2Launcher.App/Resources/Tooltips.xaml` so it can be translated later).
+- **First-run wizard.** Opens when there are no profiles, or from **New**. Seven pages: game folder (checks the
+  game exe, LM exe, `bngrw.dll`, and ini files), card (keep a valid existing one or generate a new one, values
+  masked), unique serial, network (only-cab vs multi-cab, secondary-IP PowerShell with `-SkipAsSource`, never offers
+  `127.0.0.1` for the LM), card server (version check, release download link, matchmaker address and online tag
+  secret written only to `Configurations/server.json`, never logged; link to setup guide section A8), checks (test
+  start of the card server, HTTP reachability of the matchmaker, TinyWall / Windows Firewall presence and the exact
+  exes to allow — rules are never changed), and a summary of every file that will change, with backups, then
+  **Save** or **Save and Start**.
+- **Troubleshooting.** A button with plain-English notes for 21-01, card in use / このカードは使用中です, a missing
+  card server, and firewall blocks.
+- **Loopback LM IP is rejected.** The main UI and the wizard refuse `127.0.0.1` (and other loopback addresses) for
+  the LM, because the game cannot reach an LM bound there from a LAN address (error 21-01). A loopback value already
+  in `lmnfig.ini` is not kept as authoritative.
 - **One profile per game folder**, saved as `exvs2-launcher.profiles.json` next to the exe (no card values in it).
 - Refuses to write files or start while SnowLauncher or the game is running.
 

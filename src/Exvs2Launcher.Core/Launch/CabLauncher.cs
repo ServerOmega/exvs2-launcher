@@ -61,7 +61,18 @@ public sealed class CabLauncher
             if (serverInfo.Warning is not null)
                 Say("Warning: " + serverInfo.Warning);
 
-            var report = _writer.ApplyNetwork(game.Root, decision.PcbIp, decision.LmIp, profile.ServerAddress, profile.SyncSnowLauncherIni);
+            var expectedServer = profile.ServerAddress;
+            foreach (var problem in CardServerEndpoint.Inspect(state.ClientServer, state.LmServer, expectedServer))
+                Say("Warning: " + problem);
+            Say(SocketHookSetting.Display(state.LmDisableSocketHook));
+            var hookWarn = SocketHookSetting.WarnIfDangerous(
+                state.LmDisableSocketHook, decision.PcbIp, decision.LmIp,
+                multipleCabs: all.Profiles.Count(p => !string.IsNullOrWhiteSpace(p.GameFolder)) > 1,
+                snowHook: state.SnowDisableSocketHook);
+            if (hookWarn is not null)
+                Say("Warning: " + hookWarn);
+
+            var report = _writer.ApplyNetwork(game.Root, decision.PcbIp, decision.LmIp, expectedServer, profile.SyncSnowLauncherIni);
             foreach (var w in report.Written) Say("Updated " + Path.GetFileName(w));
             foreach (var b in report.Backups) Say("Backup: " + Path.GetFileName(b));
             foreach (var n in report.Notes) Say(n);

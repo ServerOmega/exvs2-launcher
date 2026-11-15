@@ -31,6 +31,7 @@ public partial class MainWindow : Window
     private bool _starting;
     private string? _lastLogBody;
     private CancellationTokenSource? _startCts;
+    private CancellationTokenSource? _serverCheckCts;
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
     public MainWindow()
@@ -157,14 +158,22 @@ public partial class MainWindow : Window
             SerialText.Text = (s.Serial ?? "(no serial in config.ini)") +
                 (s.SnowLauncherSerial is not null && s.SnowLauncherSerial != s.Serial ? $"   (SnowLauncher.ini has {s.SnowLauncherSerial})" : "");
             CardText.Text = !s.CardPresent ? "No card in card.ini" : s.CardValid ? "Card present (values hidden)" : "Card present but not in the expected format";
-            CurrentIpText.Text = $"In the files now: config.ini IpAddress={s.ClientIp ?? "-"} (PCB), lmnfig.ini IpAddress={s.LmIp ?? "-"} (LM; authoritative), Server={s.ClientServer ?? "-"}";
+            CurrentIpText.Text =
+                $"In the files now: config.ini IpAddress={s.ClientIp ?? "-"} (PCB), lmnfig.ini IpAddress={s.LmIp ?? "-"} (LM; authoritative), " +
+                $"config.ini Server={s.ClientServer ?? "-"}, lmnfig.ini Server={s.LmServer ?? "-"}, " +
+                SocketHookSetting.Display(s.LmDisableSocketHook);
             CurrentIpText.Foreground = System.Windows.Media.Brushes.Gray;
             var nics = SafeNics();
-            var fileReasons = new[]
-            {
-                BindAddress.RejectReason(s.ClientIp, "PCB", nics),
-                BindAddress.RejectReason(s.LmIp, "LM", nics),
-            }.Where(r => r is not null).ToList();
+            var fileReasons = new List<string>();
+            var pcbWhy = BindAddress.RejectReason(s.ClientIp, "PCB", nics);
+            var lmWhy = BindAddress.RejectReason(s.LmIp, "LM", nics);
+            if (pcbWhy is not null) fileReasons.Add(pcbWhy);
+            if (lmWhy is not null) fileReasons.Add(lmWhy);
+            var expectedServer = _current is not null ? _current.ServerAddress : CardServerEndpoint.Default;
+            fileReasons.AddRange(CardServerEndpoint.Inspect(s.ClientServer, s.LmServer, expectedServer));
+            var hookWarn = SocketHookSetting.WarnIfDangerous(
+                s.LmDisableSocketHook, s.ClientIp, s.LmIp, MultipleCabsOnThisPc(), s.SnowDisableSocketHook);
+            if (hookWarn is not null) fileReasons.Add(hookWarn);
             if (fileReasons.Count > 0)
             {
                 CurrentIpText.Text += "  " + string.Join(" ", fileReasons);
@@ -174,6 +183,7 @@ public partial class MainWindow : Window
             {
                 CurrentIpText.Text += "  Note: PCB and LM share this address, which is fine for a single cab. Use a separate LM address if you run more than one cab or LM on this PC.";
             }
+            ScheduleServerReachability(expectedServer, CurrentIpText.Text);
             if (_current is not null && s.Serial is not null) _current.Serial = s.Serial;
             if (_current is not null)
             {
@@ -265,7 +275,10 @@ public partial class MainWindow : Window
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (SaveAll()) RefreshProfileBox(_current!);
+        if (!SaveAll()) return;
+        RefreshProfileBox(_current!);
+        OfferFixCardServerIni(requiredForStart: false);
+        OfferFixSocketHook(requiredForStart: false);
     }
 
     private void BrowseGame_Click(object sender, RoutedEventArgs e)
@@ -458,9 +471,15 @@ public partial class MainWindow : Window
         {
             if (NetworkBinding.SameIp(_current.PcbIp, _current.LmIp) && _current.PcbIp is not null)
                 Log(NetworkBinding.SameAddressNote);
-            var r = _writer.ApplyNetwork(folder, _current.PcbIp, _current.LmIp, _current.ServerAddress, _current.SyncSnowLauncherIni);
+            string? server = _current.ServerAddress;
+            var state = _writer.Read(folder);
+            var problems = CardServerEndpoint.Inspect(state.ClientServer, state.LmServer, server);
+            if (problems.Count > 0 && !ConfirmFixCardServerIni(problems, server))
+                server = null;
+            var r = _writer.ApplyNetwork(folder, _current.PcbIp, _current.LmIp, server, _current.SyncSnowLauncherIni);
             Report("IPs written", r);
             SaveAll(quiet: true);
+            OfferFixSocketHook(requiredForStart: false);
         }
         catch (Exception ex) { Warn("Could not write IPs: " + ex.Message); }
         RefreshGameState();
@@ -481,6 +500,11 @@ public partial class MainWindow : Window
     private async Task StartRole(string role)
     {
         if (!SaveAll(quiet: true) || _current is null) return;
+        if (role == ComponentRoles.Lm || role == ComponentRoles.Client)
+        {
+            if (!OfferFixCardServerIni(requiredForStart: true)) return;
+            if (!OfferFixSocketHook(requiredForStart: true)) return;
+        }
         await RunStart(() => _launcher.StartRoleAsync(_current, role, _startCts!.Token), $"--- Start {role} \"{_current.Name}\" ---");
     }
 
@@ -634,6 +658,95 @@ public partial class MainWindow : Window
     {
         try { return LanAddressDetector.Enumerate(); }
         catch (Exception) { return Array.Empty<NicAddress>(); }
+    }
+
+    private bool MultipleCabsOnThisPc() =>
+        _file.Profiles.Count(p => !string.IsNullOrWhiteSpace(p.GameFolder)) > 1;
+
+    private bool OfferFixSocketHook(bool requiredForStart)
+    {
+        if (_current is null) return true;
+        var folder = _current.GameFolder;
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return true;
+        GameFolderState state;
+        try { state = _writer.Read(folder); }
+        catch { return true; }
+        var warn = SocketHookSetting.WarnIfDangerous(
+            state.LmDisableSocketHook, _current.PcbIp ?? state.ClientIp, _current.LmIp ?? state.LmIp,
+            MultipleCabsOnThisPc(), state.SnowDisableSocketHook);
+        if (warn is null) return true;
+        Log(warn);
+        var body = warn + "\n\n" + SocketHookSetting.OfferFix;
+        if (MessageBox.Show(this, body, "Fix DisableSocketHook (error 21-32)",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+        {
+            if (requiredForStart)
+                Warn("Start cancelled. With DisableSocketHook=True, the LM will grab every address and other LMs fail with 21-32.");
+            return false;
+        }
+        if (!GameFilesWritable(out folder)) return false;
+        var r = _writer.ApplyLmSocketHookEnabled(folder, _current.SyncSnowLauncherIni);
+        Report("DisableSocketHook written", r);
+        RefreshGameState();
+        return true;
+    }
+
+    private bool OfferFixCardServerIni(bool requiredForStart)
+    {
+        if (_current is null) return true;
+        var folder = _current.GameFolder;
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return true;
+        GameFolderState state;
+        try { state = _writer.Read(folder); }
+        catch { return true; }
+        var expected = _current.ServerAddress;
+        var problems = CardServerEndpoint.Inspect(state.ClientServer, state.LmServer, expected);
+        if (problems.Count == 0) return true;
+        foreach (var problem in problems) Log(problem);
+        if (!ConfirmFixCardServerIni(problems, expected))
+        {
+            if (requiredForStart)
+                Warn("Start cancelled. The LM needs Server= " + expected + " in lmnfig.ini or it fails with error 21-32.");
+            return false;
+        }
+        if (!GameFilesWritable(out folder)) return false;
+        var r = _writer.ApplyNetwork(folder, pcbIp: null, lmIp: null, expected, _current.SyncSnowLauncherIni);
+        Report("Server= written", r);
+        RefreshGameState();
+        return true;
+    }
+
+    private bool ConfirmFixCardServerIni(IReadOnlyList<string> problems, string expected)
+    {
+        var body = string.Join("\n\n", problems) + "\n\n" + CardServerEndpoint.OfferFix(expected);
+        return MessageBox.Show(this, body, "Fix Server= (error 21-32)",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+    }
+
+    private void ScheduleServerReachability(string expected, string snapshot)
+    {
+        _serverCheckCts?.Cancel();
+        _serverCheckCts = new CancellationTokenSource();
+        var ct = _serverCheckCts.Token;
+        _ = CheckServerReachabilityAsync(expected, snapshot, ct);
+    }
+
+    private async Task CheckServerReachabilityAsync(string expected, string snapshot, CancellationToken ct)
+    {
+        if (!CardServerEndpoint.TryParse(expected, out var host, out var port)) return;
+        bool up;
+        try { up = await _probe.IsListeningAsync(host, port, ct); }
+        catch { return; }
+        if (ct.IsCancellationRequested || up) return;
+        await Dispatcher.InvokeAsync(() =>
+        {
+            if (ct.IsCancellationRequested) return;
+            if (CurrentIpText.Text != snapshot && !CurrentIpText.Text.StartsWith(snapshot, StringComparison.Ordinal))
+                return;
+            if (CurrentIpText.Text.Contains("is not answering", StringComparison.Ordinal)) return;
+            CurrentIpText.Text += "  " + CardServerEndpoint.Unreachable(expected);
+            CurrentIpText.Foreground = System.Windows.Media.Brushes.DarkRed;
+        });
     }
 
     private bool RejectBadBindAddresses()

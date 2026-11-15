@@ -1,5 +1,6 @@
 using Exvs2Launcher.Core.Identity;
 using Exvs2Launcher.Core.Ini;
+using Exvs2Launcher.Core.Net;
 
 namespace Exvs2Launcher.Core.Files;
 
@@ -27,7 +28,9 @@ public sealed record GameFolderState(
     string? ClientIp,
     string? LmIp,
     string? ClientServer,
-    string? LmServer);
+    string? LmServer,
+    string? LmDisableSocketHook,
+    string? SnowDisableSocketHook);
 
 /// <summary>
 /// Writes the serial, card and IP/server fields into a game folder's own files:
@@ -63,7 +66,9 @@ public sealed class GameConfigWriter
             cfg?.Get("config", "IpAddress"),
             lm?.Get("config", "IpAddress"),
             cfg?.Get("config", "Server"),
-            lm?.Get("config", "Server"));
+            lm?.Get("config", "Server"),
+            lm?.Get("config", SocketHookSetting.Key),
+            snow?.Get("Game_Config", SocketHookSetting.Key));
     }
 
     public WriteReport ApplySerial(string gameFolder, string serial, bool syncSnowLauncher)
@@ -115,10 +120,41 @@ public sealed class GameConfigWriter
 
         if (syncSnowLauncher)
             EditIfExists(g.SnowLauncherIni, d =>
-                SetLogged(d, "Game_Config", "PCB_IpAddress", pcbIp, "SnowLauncher.ini", report) |
-                SetLogged(d, "Game_Config", "LM_IpAddress", lmIp, "SnowLauncher.ini", report) |
-                SetLogged(d, "Game_Config", "Server", server, "SnowLauncher.ini", report), report);
+            {
+                bool changed =
+                    SetLogged(d, "Game_Config", "PCB_IpAddress", pcbIp, "SnowLauncher.ini", report) |
+                    SetLogged(d, "Game_Config", "LM_IpAddress", lmIp, "SnowLauncher.ini", report) |
+                    SetLogged(d, "Game_Config", "Server", server, "SnowLauncher.ini", report);
+                NoteSnowHookNotPushed(d, report);
+                return changed;
+            }, report);
         return report;
+    }
+
+    /// <summary>
+    /// Sets <c>lmnfig.ini</c> <c>DisableSocketHook=False</c> (and SnowLauncher.ini when syncing).
+    /// Never writes True — SnowLauncher does that for the LM, and it makes the LM bind every address.
+    /// </summary>
+    public WriteReport ApplyLmSocketHookEnabled(string gameFolder, bool syncSnowLauncher)
+    {
+        var g = new GameFolder(gameFolder);
+        var report = new WriteReport();
+        if (File.Exists(g.LmIni))
+            Edit(g.LmIni, false, d => SetLogged(d, "config", SocketHookSetting.Key, SocketHookSetting.EnabledValue, "lmnfig.ini", report), report);
+        else
+            report.Notes.Add("lmnfig.ini not found; DisableSocketHook not written.");
+        if (syncSnowLauncher)
+            EditIfExists(g.SnowLauncherIni, d =>
+                SetLogged(d, "Game_Config", SocketHookSetting.Key, SocketHookSetting.EnabledValue, "SnowLauncher.ini", report), report);
+        return report;
+    }
+
+    private static void NoteSnowHookNotPushed(IniDocument d, WriteReport report)
+    {
+        var hook = d.Get("Game_Config", SocketHookSetting.Key);
+        if (SocketHookSetting.IsDisabled(hook))
+            report.Notes.Add("SnowLauncher.ini has DisableSocketHook=True; it was not written to lmnfig.ini. Opening SnowLauncher would turn the LM hook off, so "
+                             + SocketHookSetting.GrabEveryAddress + ". Use Write IPs or Save to set it to False.");
     }
 
     /// <summary>
@@ -130,6 +166,11 @@ public sealed class GameConfigWriter
     {
         if (string.IsNullOrWhiteSpace(value)) return false;
         value = value.Trim();
+        if (key.Equals(SocketHookSetting.Key, StringComparison.OrdinalIgnoreCase) && SocketHookSetting.IsDisabled(value))
+        {
+            report.Notes.Add(fileLabel + " DisableSocketHook=True was not written. This launcher never turns the LM socket hook off.");
+            return false;
+        }
         var old = d.Get(section, key);
         bool changed = d.Set(section, key, value);
         bool ipKey = key.Equals("IpAddress", StringComparison.OrdinalIgnoreCase)

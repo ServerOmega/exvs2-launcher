@@ -14,7 +14,7 @@ This repo is a from-scratch replacement for the *launcher / orchestrator* layer:
 
 ## Status
 
-Private preview, **v0.2.1 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+Private preview, **v0.2.2 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
 
 - **Correct start order.** Starts the patched card server you pick (`Server-Infinite.exe` or `3-Start-Server.bat`),
   waits until `127.0.0.1:28080` accepts connections, then starts the LM (`vsac29_Release_LM.exe`, optional) and the
@@ -58,8 +58,12 @@ Private preview, **v0.2.1 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
   start of the card server, HTTP reachability of the matchmaker, TinyWall / Windows Firewall presence and the exact
   exes to allow — rules are never changed), and a summary of every file that will change, with backups, then
   **Save** or **Save and Start**.
-- **Troubleshooting.** A button with plain-English notes for 21-01, card in use / このカードは使用中です, a missing
+- **Troubleshooting.** A button with plain-English notes for 21-01, 21-32, card in use / このカードは使用中です, a missing
   card server, and firewall blocks.
+- **Card-server `Server=` is checked.** The main UI and the wizard show `Server=` from both `config.ini` and
+  `lmnfig.ini`, and warn if it is missing a port, does not match the profile card server address, or that address
+  is not answering. Write IPs and Save offer to write the correct `host:port` (error 21-32 otherwise).
+- **LM `DisableSocketHook` is shown and checked.** The main UI and the wizard display `lmnfig.ini DisableSocketHook`. If it is `True` while the LM IP differs from the PCB IP or more than one cab is on this PC, they warn that the LM will grab every address and other LMs fail with 21-32, and Write IPs / Save offer to set it back to `False`. The launcher never turns the hook off, and SnowLauncher.ini sync will not push `True`.
 - **Unusable LM and PCB IPs are rejected.** The main UI and the wizard refuse `127.0.0.1`, `0.0.0.0`, link-local
   `169.254.x`, and any address not assigned to a local adapter. The LM hook needs an address that exists on an
   adapter or it fails with "failed to find interface". Dropdowns only list real adapter addresses. A bad value

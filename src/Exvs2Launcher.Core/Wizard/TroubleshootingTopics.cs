@@ -12,6 +12,7 @@ public static class TroubleshootingTopics
     public const string CardInUseId = "card-in-use";
     public const string CardServerId = "card-server";
     public const string FirewallId = "firewall";
+    public const string LmCardServerId = "21-32";
 
     public static readonly TroubleTopic LmDisconnect = new(
         LmDisconnectId,
@@ -33,9 +34,15 @@ public static class TroubleshootingTopics
         "Firewall or TinyWall blocking",
         "If the card server, LM, or game cannot accept connections, your firewall may be blocking them. The launcher never changes firewall rules. Allow the exact programs listed on the Checks page: vsac29_Release.exe, vsac29_Release_LM.exe, and Server-Infinite.exe. In TinyWall, add those same exes to the allow list.");
 
+    public static readonly TroubleTopic LmCardServer = new(
+        LmCardServerId,
+        "21-32 Live Monitor communication error",
+        "Error 21-32 means the LM can't reach the card server: check Server= in lmnfig.ini matches the card server address and port, and the card server is running. The same Server= host:port should also be in config.ini. A value with no port, or the LM's own IP (for example 192.168.1.245), will fail. The usual local address is 127.0.0.1:28080. Use Write IPs or Save in the launcher to fix it. "
+        + "21-32 also happens when lmnfig.ini DisableSocketHook is True in a multi-cab setup: with the hook off, the LM ignores IpAddress and binds every address (0.0.0.0:48000/49000), so the LM will grab every address and other LMs fail with 21-32. SnowLauncher writes True for the LM. This launcher shows the value, warns, and can set it back to False, but never turns the hook off by itself.");
+
     public static IReadOnlyList<TroubleTopic> All { get; } = new[]
     {
-        LmDisconnect, CardInUse, CardServer, Firewall,
+        LmDisconnect, LmCardServer, CardInUse, CardServer, Firewall,
     };
 
     public static TroubleTopic? Find(string id) =>

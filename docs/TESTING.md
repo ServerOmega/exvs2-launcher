@@ -1,4 +1,4 @@
-# Testing the v0.2.1 launcher
+# Testing the v0.2.2 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -40,8 +40,11 @@ being cut off as a single long line, and the gray "In the files now" note should
 Expected: the profiles JSON appears next to the exe and has no card values or tag secret in it. Game files that
 already had a unique serial and a valid card are not rewritten unless you asked for a new card/serial or a new IP.
 
-The main window still has Browse / Save for an existing profile. **Troubleshooting** explains 21-01, card in use /
-このカードは使用中です, a missing card server, and firewall blocks.
+The main window still has Browse / Save for an existing profile. **Troubleshooting** explains 21-01, 21-32, card in use /
+このカードは使用中です, a missing card server, and firewall blocks. The network status line shows `Server=` from both
+`config.ini` and `lmnfig.ini`. If `lmnfig.ini` has `Server=192.168.1.245` (no port), the line turns red and Save
+or Write IPs offers to set `Server=127.0.0.1:28080`. A missing card server also adds a "not answering" warning.
+The same line shows `lmnfig.ini DisableSocketHook`. If it is `True` and the LM IP is not the PCB IP (or you have more than one cab profile), it warns that the LM will grab every address and other LMs fail with 21-32, and Save or Write IPs offers to set it to `False`. Syncing SnowLauncher.ini must not write `DisableSocketHook=True`.
 
 ## 2. Check port
 
@@ -97,7 +100,7 @@ dropdowns only list real adapter addresses.
 Please report: anything in the log that looks wrong, whether the game boots and reaches the card screen, whether
 LM/client need a longer "LM → client delay", and whether the PCB and LM IPs it used are the ones you expected.
 
-## Known gaps in v0.2.1
+## Known gaps in v0.2.2
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.

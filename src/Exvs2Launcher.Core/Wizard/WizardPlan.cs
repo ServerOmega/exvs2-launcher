@@ -112,6 +112,43 @@ public static class WizardPlanner
                     "Sync PCB and LM IPs into SnowLauncher.ini.", true, !File.Exists(g.SnowLauncherIni)));
         }
 
+        var expectedServer = CardServerEndpoint.Expected(null, state.CardServerPort);
+        var serverProblems = CardServerEndpoint.Inspect(current.ClientServer, current.LmServer, expectedServer);
+        if (serverProblems.Count > 0)
+        {
+            foreach (var problem in serverProblems) plan.Notes.Add(problem);
+            if (!CardServerEndpoint.Same(current.ClientServer, expectedServer))
+                plan.Writes.Add(new PlannedWrite(g.ClientIni, "config.ini",
+                    "Set Server= " + (current.ClientServer ?? "(none)") + " → " + expectedServer +
+                    " so the game can reach the card server (error 21-32 otherwise).", true, false));
+            if (!CardServerEndpoint.Same(current.LmServer, expectedServer))
+                plan.Writes.Add(new PlannedWrite(g.LmIni, "lmnfig.ini",
+                    "Set Server= " + (current.LmServer ?? "(none)") + " → " + expectedServer +
+                    " so the LM can reach the card server (error 21-32 otherwise).", true, false));
+            if (state.SyncSnowLauncherIni)
+                plan.Writes.Add(new PlannedWrite(g.SnowLauncherIni, "SnowLauncher.ini",
+                    "Sync Server=" + expectedServer + " into SnowLauncher.ini.", true, !File.Exists(g.SnowLauncherIni)));
+        }
+        else
+            plan.Notes.Add("config.ini and lmnfig.ini Server=" + expectedServer + " already match the card server.");
+
+        plan.Notes.Add(SocketHookSetting.Display(current.LmDisableSocketHook));
+        var hookWarn = SocketHookSetting.WarnIfDangerous(
+            current.LmDisableSocketHook, state.PcbIp, state.LmIp,
+            multipleCabs: !state.OnlyCabOnThisPc, snowHook: current.SnowDisableSocketHook);
+        if (hookWarn is not null)
+        {
+            plan.Notes.Add(hookWarn);
+            if (SocketHookSetting.IsDisabled(current.LmDisableSocketHook))
+                plan.Writes.Add(new PlannedWrite(g.LmIni, "lmnfig.ini",
+                    "Set DisableSocketHook=True → False so the LM stays on its own IP (the LM will grab every address and other LMs fail with 21-32 otherwise).",
+                    true, false));
+            if (state.SyncSnowLauncherIni && SocketHookSetting.IsDisabled(current.SnowDisableSocketHook))
+                plan.Writes.Add(new PlannedWrite(g.SnowLauncherIni, "SnowLauncher.ini",
+                    "Set SnowLauncher.ini DisableSocketHook=True → False so opening SnowLauncher does not turn the LM hook off.",
+                    true, !File.Exists(g.SnowLauncherIni)));
+        }
+
         if (string.IsNullOrWhiteSpace(state.CardServerPath))
             plan.Notes.Add("No card server path yet. You can set it later, but the game will not go online without it.");
         else
@@ -171,8 +208,10 @@ public static class WizardPlanner
             NeedsSerialWrite(SafeReadSerial(writer, state.GameFolder), state.Serial, state.SerialAction))
             report.Merge(writer.ApplySerial(state.GameFolder!, state.Serial, state.SyncSnowLauncherIni));
 
-        if (!string.IsNullOrWhiteSpace(state.PcbIp) || !string.IsNullOrWhiteSpace(state.LmIp))
-            report.Merge(writer.ApplyNetwork(state.GameFolder!, state.PcbIp, state.LmIp, server: null, state.SyncSnowLauncherIni));
+        var expectedServer = CardServerEndpoint.Expected(null, state.CardServerPort);
+        report.Merge(writer.ApplyNetwork(state.GameFolder!, state.PcbIp, state.LmIp, expectedServer, state.SyncSnowLauncherIni));
+        if (preview.Writes.Any(w => w.Summary.Contains("DisableSocketHook", StringComparison.Ordinal)))
+            report.Merge(writer.ApplyLmSocketHookEnabled(state.GameFolder!, state.SyncSnowLauncherIni));
 
         if (!string.IsNullOrWhiteSpace(state.CardServerPath) &&
             (!string.IsNullOrWhiteSpace(state.MatchUrl) || !string.IsNullOrWhiteSpace(state.TagSecret)))

@@ -460,7 +460,12 @@ public class WizardChecksTests
         Assert.Contains("このカードは使用中です", TroubleshootingTopics.CardInUse.Title);
         Assert.Contains("Server-Infinite", TroubleshootingTopics.CardServer.Body);
         Assert.Contains("never changes firewall", TroubleshootingTopics.Firewall.Body, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(4, TroubleshootingTopics.All.Count);
+        Assert.Contains("21-32", TroubleshootingTopics.LmCardServer.Title);
+        Assert.Contains("LM can't reach the card server", TroubleshootingTopics.LmCardServer.Body);
+        Assert.Contains("Server= in lmnfig.ini", TroubleshootingTopics.LmCardServer.Body);
+        Assert.Contains("DisableSocketHook", TroubleshootingTopics.LmCardServer.Body);
+        Assert.Contains("the LM will grab every address and other LMs fail with 21-32", TroubleshootingTopics.LmCardServer.Body);
+        Assert.Equal(5, TroubleshootingTopics.All.Count);
     }
 }
 

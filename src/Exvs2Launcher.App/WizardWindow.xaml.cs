@@ -15,7 +15,7 @@ namespace Exvs2Launcher.App;
 
 public partial class WizardWindow : Window
 {
-    public const int StepCount = 7;
+    public const int StepCount = 8;
 
     private readonly ProfileFile _file;
     private readonly ProfileStore _store;
@@ -70,12 +70,13 @@ public partial class WizardWindow : Window
         PageSerial.Visibility = Vis(2);
         PageNetwork.Visibility = Vis(3);
         PageServer.Visibility = Vis(4);
-        PageChecks.Visibility = Vis(5);
-        PageSummary.Visibility = Vis(6);
+        PageBattleMode.Visibility = Vis(5);
+        PageChecks.Visibility = Vis(6);
+        PageSummary.Visibility = Vis(7);
 
         string[] titles =
         {
-            "Game folder", "Card", "Serial", "Network", "Card server", "Checks", "Summary",
+            "Game folder", "Card", "Serial", "Network", "Card server", "Online battle mode", "Checks", "Summary",
         };
         StepTitle.Text = titles[_step];
         StepSubtitle.Text = "Step " + (_step + 1) + " of " + StepCount;
@@ -93,8 +94,9 @@ public partial class WizardWindow : Window
             case 2: RefreshSerialPage(); break;
             case 3: RefreshNetworkPage(); break;
             case 4: RefreshServerPage(); break;
-            case 5: break;
-            case 6: RefreshSummary(); break;
+            case 5: RefreshBattleModePage(); break;
+            case 6: break;
+            case 7: RefreshSummary(); break;
         }
     }
 
@@ -113,6 +115,8 @@ public partial class WizardWindow : Window
         _state.MatchUrl = string.IsNullOrWhiteSpace(MatchUrlBox.Text) ? null : MatchUrlBox.Text.Trim();
         var secret = TagSecretBox.Password;
         _state.TagSecret = string.IsNullOrWhiteSpace(secret) ? null : secret;
+        if (BattleModeCheck is not null)
+            _state.SetBattleModeOnline = BattleModeCheck.IsChecked == true;
     }
 
     private static string? IpFrom(string? display)
@@ -462,6 +466,27 @@ public partial class WizardWindow : Window
     }
 
     // ----- summary / save -----
+
+
+    private void BattleMode_Changed(object sender, RoutedEventArgs e) => RefreshBattleModePage();
+
+    private void RefreshBattleModePage()
+    {
+        if (BattleModeCheck is not null)
+            _state.SetBattleModeOnline = BattleModeCheck.IsChecked == true;
+        if (string.IsNullOrWhiteSpace(_state.GameFolder))
+        {
+            BattleModeStatus.Text = "Pick a game folder first.";
+            return;
+        }
+        if (!(_state.SetBattleModeOnline))
+        {
+            BattleModeStatus.Text = "battleMode will be left as it is. The cab stays on the in-store Live Monitor path if battleMode is not 0.";
+            return;
+        }
+        var inspect = TestModeBattleMode.Inspect(TestModeBattleMode.PathFor(_state.GameFolder));
+        BattleModeStatus.Text = inspect.CanWrite ? inspect.Summary : (inspect.Error ?? inspect.Summary);
+    }
 
     private void RefreshSummary()
     {

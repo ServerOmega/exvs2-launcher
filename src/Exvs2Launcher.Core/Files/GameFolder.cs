@@ -21,6 +21,8 @@ public sealed class GameFolder
     public string CardIni => Path.Combine(Root, CardIniName);
     public string SnowLauncherIni => Path.Combine(Root, SnowLauncherIniName);
     public string BngrwDll => Path.Combine(Root, BngrwDllName);
+    /// <summary>svd1-wrapped test-mode store. The launcher never creates this file from scratch.</summary>
+    public string TestModePcbJson => Path.Combine(Root, "29", "testmode_pcb.json");
     /// <summary>The pack's stock card server. The launcher never starts it.</summary>
     public string StockServerExe => Path.Combine(Root, "server", "Server.exe");
 

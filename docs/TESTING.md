@@ -1,4 +1,4 @@
-# Testing the v0.3.0 launcher
+# Testing the v0.3.1 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -120,15 +120,30 @@ LM/client need a longer "LM → client delay", and whether the PCB and LM IPs it
 4. With the card server running, click **Open web page**. The default browser should open `http://127.0.0.1:28080/`
    (or this cab's host/port). That is the card server WebUI (`/` or `/Cards`).
 
-## Known gaps in v0.3.0
+## 7. Wizard sets battleMode to 0
+
+Close the game and LM first. Click **New** and walk through the setup wizard for a cab folder that has
+`29\testmode_pcb.json`.
+
+1. The **Online battle mode** page should be checked by default ("Set battleMode to 0 (online matching)"). It should
+   say how many setting groups will change, or that they are already 0. If the file is missing or the svd1 checksum
+   / version cannot be rewritten safely, it should say so and must not offer a write that it cannot complete.
+2. On **Save**, if a change was needed, a timestamped `testmode_pcb.json.bak-...` should appear next to the file, the
+   log should say which battleMode values went to 0, and no other test-mode fields should change. Leave the box
+   checked unless you really want to keep an in-store battleMode.
+3. Do not use EXIT & SAVE in the test menu to make this change. If a cab was already in a session, restart that cab
+   so it rereads the file.
+
+## Known gaps in v0.3.1
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.
 - The launcher cannot add a second LAN IP for you; the wizard shows the PowerShell command, but you still have to
   run it in an elevated window.
-- No battleMode editor or resolution helpers yet. `29\testmode_pcb.json` is an svd1-wrapped test-mode store (not
-  plain JSON). Besides `battleMode` it also holds `cpuMode`, `lanBattleTimeLimit`, coin costs, close times, and
-  many other operator settings. A battleMode editor is still optional and not in this build.
+- No full test-mode editor or resolution helpers yet. The wizard only sets `battleMode` to 0 in
+  `29\testmode_pcb.json` (an svd1-wrapped store, not plain JSON). Other operator settings (`cpuMode`, time limits,
+  coin costs, close times, and the rest) are left alone. If the file uses an svd1 version other than 1, or the SHA-1
+  checksum does not match, the launcher will not write it.
 - Controller detection uses XInput and WinMM only. A stick that appears only as a raw HID device may need its
   name and button ids typed by hand.
 - If "Server" is the card server's process name, the launcher treats it as the stock server.

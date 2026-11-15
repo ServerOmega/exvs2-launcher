@@ -8,7 +8,7 @@
         ToolTipService.ShowDuration="30000">
   <DockPanel Margin="14">
     <TextBlock DockPanel.Dock="Top" x:Name="StepTitle" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,2" Text="Game folder" />
-    <TextBlock DockPanel.Dock="Top" x:Name="StepSubtitle" Foreground="Gray" Margin="0,0,0,10" Text="Step 1 of 7" />
+    <TextBlock DockPanel.Dock="Top" x:Name="StepSubtitle" Foreground="Gray" Margin="0,0,0,10" Text="Step 1 of 8" />
 
     <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
       <Grid>
@@ -141,7 +141,23 @@
       </ScrollViewer>
     </Grid>
 
-    <!-- 6. Checks -->
+    <!-- 6. battleMode -->
+    <Grid x:Name="PageBattleMode" Visibility="Collapsed">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                     Text="The cab uses online (WAN) matchmaking only when battleMode is 0 in 29\testmode_pcb.json. Any other value stays on the in-store Live Monitor path. The wizard sets every battleMode field to 0 and leaves every other test-mode setting as it is. The file is an svd1 container; it is backed up first, then read back to confirm the change. If the file cannot be rewritten safely, it is left unchanged." />
+          <CheckBox x:Name="BattleModeCheck" Content="Set battleMode to 0 (online matching)" IsChecked="True" Margin="0,0,0,8"
+                    Checked="BattleMode_Changed" Unchecked="BattleMode_Changed"
+                    ToolTip="{StaticResource Tip.WizardBattleMode}" />
+          <Border Padding="10" Background="#FFF8FAFC" BorderBrush="#FFCBD5E1" BorderThickness="1" CornerRadius="3">
+            <TextBlock x:Name="BattleModeStatus" TextWrapping="Wrap" Text="" />
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- 7. Checks -->
     <Grid x:Name="PageChecks" Visibility="Collapsed">
       <DockPanel>
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
@@ -154,7 +170,7 @@
       </DockPanel>
     </Grid>
 
-    <!-- 7. Summary -->
+    <!-- 8. Summary -->
     <Grid x:Name="PageSummary" Visibility="Collapsed">
       <DockPanel>
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"

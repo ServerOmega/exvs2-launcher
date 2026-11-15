@@ -14,7 +14,7 @@ This repo is a from-scratch replacement for the *launcher / orchestrator* layer:
 
 ## Status
 
-Private preview, **v0.3.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+Private preview, **v0.3.1 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
 
 - **Correct start order.** Starts the patched card server you pick (`Server-Infinite.exe` or `3-Start-Server.bat`),
   waits until `127.0.0.1:28080` accepts connections, then starts the LM (`vsac29_Release_LM.exe`, optional) and the
@@ -53,11 +53,14 @@ Private preview, **v0.3.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
   has a `BUILD_COMMIT` (or is named like `mm-server2`), and is reused on Start all. Only the pack's
   `server\Server.exe` is called stock. The same message is not logged twice on repeated clicks. The status label
   shows why a start or Check port failed.
-- **First-run wizard.** Opens when there are no profiles, or from **New**. Seven pages: game folder (checks the
+- **First-run wizard.** Opens when there are no profiles, or from **New**. Eight pages: game folder (checks the
   game exe, LM exe, `bngrw.dll`, and ini files), card (keep a valid existing one or generate a new one, values
   masked), unique serial, network (only-cab vs multi-cab, secondary-IP PowerShell with `-SkipAsSource`, never offers
   `127.0.0.1` for the LM), card server (version check, release download link, matchmaker address and online tag
-  secret written only to `Configurations/server.json`, never logged; link to setup guide section A8), checks (test
+  secret written only to `Configurations/server.json`, never logged; link to setup guide section A8), online battle
+  mode (sets every `battleMode` field in `29\testmode_pcb.json` to 0 for WAN matchmaking; other test-mode fields stay
+  byte-for-byte intact; the svd1 container is backed up, rewritten with a fresh SHA-1, and read back; if the version
+  or checksum cannot be rewritten safely the file is left unchanged), checks (test
   start of the card server, HTTP reachability of the matchmaker, TinyWall / Windows Firewall presence and the exact
   exes to allow — rules are never changed), and a summary of every file that will change, with backups, then
   **Save** or **Save and Start**.

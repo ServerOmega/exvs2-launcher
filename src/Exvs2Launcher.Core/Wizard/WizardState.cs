@@ -26,6 +26,8 @@ public sealed class WizardState
     public bool StartLm { get; set; } = true;
     public bool StartClient { get; set; } = true;
     public bool StartCardServer { get; set; } = true;
+    /// <summary>When true (the default), the wizard sets every battleMode field in 29/testmode_pcb.json to 0.</summary>
+    public bool SetBattleModeOnline { get; set; } = true;
 
     public override string ToString() =>
         "WizardState { Name = " + ProfileName +

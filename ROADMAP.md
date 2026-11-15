@@ -44,7 +44,7 @@ This is the first build that can replace SnowLauncher for local + VPS matchmakin
 
 ## Milestone 3 — Cab quality-of-life
 
-- battleMode editor for `29\testmode_pcb.json` (backup first)
+- [x] Wizard sets `battleMode` to 0 in `29\testmode_pcb.json` (v0.3.1, backup first, svd1-safe rewrite only); a full test-mode editor is still later
 - [x] Fightstick / controller binding UI (v0.3.0); keyboard editor still later
 - Resolution / windowed / borderless / skip-opening / framerate
 - "New card" and "new serial" buttons in the UI

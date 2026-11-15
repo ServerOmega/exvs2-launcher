@@ -185,6 +185,8 @@ public static class WizardPlanner
             }
         }
 
+        AddBattleModePlan(plan, state, g);
+
         plan.Notes.Add("A profile named \"" + (string.IsNullOrWhiteSpace(state.ProfileName) ? "New cab" : state.ProfileName.Trim()) + "\" will be saved in the launcher profile list.");
         Dedup(plan);
         return plan;
@@ -220,6 +222,9 @@ public static class WizardPlanner
             if (json is not null)
                 report.Merge(CardServerConfig.Apply(json, state.MatchUrl, state.TagSecret, backups));
         }
+
+        if (state.SetBattleModeOnline && !string.IsNullOrWhiteSpace(state.GameFolder))
+            report.Merge(TestModeBattleMode.ApplyZero(TestModeBattleMode.PathFor(state.GameFolder), backups));
 
         UpsertProfile(file, state);
         report.Notes.Add("Saved launcher profile \"" + state.ToProfile().Name + "\".");
@@ -274,6 +279,27 @@ public static class WizardPlanner
         if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return null;
         try { return writer.Read(folder).Serial; }
         catch (Exception) { return null; }
+    }
+
+    private static void AddBattleModePlan(WizardPlan plan, WizardState state, GameFolder g)
+    {
+        if (!state.SetBattleModeOnline)
+        {
+            plan.Notes.Add("battleMode in " + TestModeBattleMode.RelativePath + " will be left as it is.");
+            return;
+        }
+        var inspect = TestModeBattleMode.Inspect(g.TestModePcbJson);
+        if (!inspect.CanWrite)
+        {
+            plan.Notes.Add(inspect.Error ?? inspect.Summary);
+            return;
+        }
+        if (inspect.AlreadyZero)
+        {
+            plan.Notes.Add(inspect.Summary);
+            return;
+        }
+        plan.Writes.Add(new PlannedWrite(g.TestModePcbJson, TestModeBattleMode.FileName, inspect.Summary, true, false));
     }
 
     private static void Dedup(WizardPlan plan)

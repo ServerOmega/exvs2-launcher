@@ -13,7 +13,7 @@ out/
 *.exp
 *.so
 *.dylib
-*.app
+# (*.app removed: it hid src/Exvs2Launcher.App on case-insensitive Windows checkouts)
 *.msi
 *.msix
 *.appx
@@ -110,3 +110,7 @@ Desktop.ini
 *.tar
 *.tar.gz
 *.iso
+
+# Launcher local state (written next to the exe)
+exvs2-launcher.profiles.json
+exvs2-launcher.profiles.json.tmp

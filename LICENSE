@@ -1,16 +1,11 @@
-License pending.
+Copyright (c) 2026 ServerOmega. All rights reserved.
 
-The owner of this repository has not chosen a license yet. Until a license
-file is added and this notice is replaced:
+This software and its source code are proprietary. No permission is granted to
+use, copy, modify, merge, publish, distribute, sublicense, or sell copies of it,
+in whole or in part, without prior written permission from ServerOmega.
+Collaborators may access it only as allowed by the private repository's access
+controls.
 
-- All rights are reserved by the owner.
-- No permission is granted to copy, modify, or redistribute this work
-  except as already allowed by the private GitHub repository's access
-  controls.
-
-This project is not affiliated with Bandai Namco, SnowLauncher, TeknoParrot,
-or the EXVS2-POC project. Do not add game assets, hook DLLs, or third-party
-launcher binaries to this repository.
-
-If you are the owner, pick a license (for example MIT, Apache-2.0, or GPL-3.0)
-and replace this file.
+This project is not affiliated with Bandai Namco, SnowLauncher, TeknoParrot, or
+the EXVS2-POC project. It contains no game data, hook DLLs, or third-party
+launcher code or binaries.

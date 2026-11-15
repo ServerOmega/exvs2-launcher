@@ -8,8 +8,17 @@ Dates are not committed. Work stays in this private repo until the owner is read
 - [x] README, license placeholder, `.gitignore`
 - [x] Clean-room SnowLauncher notes
 - [x] Architecture proposal and stack recommendation
-- [ ] Owner picks a license
-- [ ] Owner confirms stack (recommended: C# / .NET 8 + WPF) and v1 scope
+- [x] Owner picks a license (all rights reserved)
+- [x] Owner confirms stack: C# / .NET 8 + WPF; v1 = start order + unique serial/card
+
+## v0.1.0 MVP (branch `mvp`, awaiting the owner's test)
+
+- [x] `Exvs2Launcher.Core` + xUnit tests: line-preserving INI editor (comments, spacing, encoding, line endings),
+      serial/card generator, backups, NIC auto-detect, profile store, start-order state machine with fake processes
+- [x] WPF window: profiles, New serial, New card, Detect/Write IPs, Start / Cancel / Stop game / Stop all / Check port
+- [x] Start order: patched card server → wait for 127.0.0.1:28080 → LM → client; never the stock Server.exe;
+      reports which process holds the port
+- [ ] Owner tests on a real cab (see docs/TESTING.md)
 
 ## Milestone 1 — Core library, no game start required
 

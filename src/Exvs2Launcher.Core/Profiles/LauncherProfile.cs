@@ -22,7 +22,7 @@ public sealed class LauncherProfile
     public int PortTimeoutSeconds { get; set; } = 90;
     public int LmToClientDelaySeconds { get; set; } = 3;
 
-    /// <summary>Detect this PC's LAN IP on every start and write it as the PCB and LM IP.</summary>
+    /// <summary>Detect this PC's LAN IP on every start and write it as the PCB (client) IP only. The LM IP is never auto-filled; lmnfig.ini is authoritative.</summary>
     public bool AutoDetectIp { get; set; } = true;
     public string? PcbIp { get; set; }
     public string? LmIp { get; set; }

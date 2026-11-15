@@ -15,15 +15,18 @@ public sealed class StartSequencer
     private readonly IPortOwnerLookup _owners;
     private readonly IDelay _delay;
     private readonly Func<string, bool> _fileExists;
+    private readonly IProcessControl _processes;
     private readonly List<IStartedProcess> _started = new();
 
-    public StartSequencer(IProcessStarter starter, IPortProbe probe, IPortOwnerLookup owners, IDelay delay, Func<string, bool>? fileExists = null)
+    public StartSequencer(IProcessStarter starter, IPortProbe probe, IPortOwnerLookup owners, IDelay delay,
+        Func<string, bool>? fileExists = null, IProcessControl? processes = null)
     {
         _starter = starter;
         _probe = probe;
         _owners = owners;
         _delay = delay;
         _fileExists = fileExists ?? File.Exists;
+        _processes = processes ?? new SystemProcessControl();
     }
 
     public StartStage Stage { get; private set; } = StartStage.Idle;
@@ -70,8 +73,14 @@ public sealed class StartSequencer
                     break;
                 case PortOwnerKind.None:
                     if (!plan.StartCardServer)
-                        return Fail($"Nothing is listening on {plan.Host}:{plan.Port} and starting the card server is turned off. " +
-                                    "Start the patched card server first, or turn on \"Start card server\".");
+                    {
+                        if (plan.RequireCardServerPort)
+                            return Fail($"Nothing is listening on {plan.Host}:{plan.Port} and starting the card server is turned off. " +
+                                        "Start the patched card server first, or turn on \"Start card server\".");
+                        Say($"Nothing is listening on {plan.Host}:{plan.Port}. Starting the selected programs anyway.");
+                        break;
+                    }
+
                     Enter(StartStage.StartingCardServer);
                     var server = StartProcess("Card server", plan.CardServerPath!, plan.CardServerArguments,
                         Path.GetDirectoryName(Path.GetFullPath(plan.CardServerPath!))!);
@@ -139,12 +148,61 @@ public sealed class StartSequencer
         for (int i = _started.Count - 1; i >= 0; i--)
         {
             var p = _started[i];
-            if (!includeCardServer && p.Role == "Card server") continue;
+            if (!includeCardServer && p.Role == ComponentRoles.CardServer) continue;
             if (!p.HasExited) { p.Kill(); n++; Say($"Closed {p.Role} (pid {p.Id})."); }
             _started.RemoveAt(i);
         }
         Enter(StartStage.Idle);
         return n;
+    }
+
+    /// <summary>
+    /// Stops one component of this profile: first the PID this launcher started, then any process whose exe
+    /// path is in this profile's folder (never another cab's folder).
+    /// </summary>
+    public int StopRole(string role, StartPlan plan)
+    {
+        _started.RemoveAll(p => p.HasExited);
+        var hits = ProfileProcessMatcher.Find(role, plan, _started, SafeList());
+        int n = 0;
+        var startedIds = _started.Where(p => p.Role == role).Select(p => p.Id).ToHashSet();
+        foreach (var (pid, how) in hits)
+        {
+            var tracked = _started.FirstOrDefault(p => p.Id == pid);
+            if (tracked is not null)
+            {
+                if (!tracked.HasExited) { tracked.Kill(); n++; Say($"Closed {role} (pid {pid}, {how})."); }
+                _started.Remove(tracked);
+            }
+            else
+            {
+                _processes.KillTree(pid);
+                n++;
+                Say($"Closed {role} (pid {pid}, {how}).");
+            }
+        }
+        if (n == 0) Say($"{role} is not running for this profile.");
+        if (_started.All(p => p.HasExited)) Enter(StartStage.Idle);
+        return n;
+    }
+
+    public ComponentStatus RoleStatus(string role, StartPlan plan)
+    {
+        _started.RemoveAll(p => p.HasExited);
+        return ProfileProcessMatcher.Status(role, plan, _started, SafeList());
+    }
+
+    public IReadOnlyList<ComponentStatus> RoleStatuses(StartPlan plan) =>
+        ComponentRoles.All.Select(r => RoleStatus(r, plan)).ToList();
+
+    private IReadOnlyList<RunningProcessInfo> SafeList()
+    {
+        try { return _processes.List(); }
+        catch (Exception ex)
+        {
+            Say("Could not list running programs: " + ex.Message);
+            return Array.Empty<RunningProcessInfo>();
+        }
     }
 
     public string? Validate(StartPlan plan)

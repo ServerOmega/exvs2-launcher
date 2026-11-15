@@ -9,14 +9,18 @@ namespace Exvs2Launcher.Core.Tests;
 public class CabLauncherTests
 {
     private static readonly NicAddress Lan = new("Ethernet", "Realtek", "192.168.1.80", NetworkInterfaceType.Ethernet, true, false);
+    private static readonly NicAddress LmSecondary = new("Ethernet", "Realtek", "192.168.1.245", NetworkInterfaceType.Ethernet, true, false);
+    private static readonly NicAddress ExistingLm = new("Ethernet", "Realtek", "192.168.1.69", NetworkInterfaceType.Ethernet, true, false);
 
-    private static (CabLauncher, FakeWorld, List<string>) Make(TempGameFolder g, IReadOnlyList<string>? conflicts = null)
+    private static (CabLauncher, FakeWorld, List<string>) Make(
+        TempGameFolder g, IReadOnlyList<string>? conflicts = null, IReadOnlyList<NicAddress>? nics = null)
     {
         var w = new FakeWorld();
         w.Files.Add(Path.Combine(g.Root, "3-Start-Server.bat"));
         w.Files.Add(Path.Combine(g.Root, "vsac29_Release.exe"));
         var seq = new StartSequencer(w, w, w, w, w.Files.Contains);
-        var launcher = new CabLauncher(seq, new GameConfigWriter(), () => conflicts ?? Array.Empty<string>(), () => new[] { Lan });
+        var launcher = new CabLauncher(seq, new GameConfigWriter(), () => conflicts ?? Array.Empty<string>(),
+            () => nics ?? new[] { Lan, ExistingLm, LmSecondary });
         var log = new List<string>();
         launcher.Log += log.Add;
         seq.Log += log.Add;
@@ -24,20 +28,46 @@ public class CabLauncherTests
     }
 
     [Fact]
-    public async Task Start_writes_detected_ip_then_runs_in_order()
+    public async Task Start_writes_detected_pcb_ip_but_keeps_existing_lm_ip()
     {
         using var g = new TempGameFolder();
+        // lmnfig starts at 192.168.1.69, which is a real address on the adapter. Auto-detect must not overwrite it
+        // with the detected PCB IP (.80).
         var (launcher, w, log) = Make(g);
         var p = new LauncherProfile { Name = "Test", GameFolder = g.Root, CardServerPath = Path.Combine(g.Root, "3-Start-Server.bat") };
         var r = await launcher.StartAsync(new ProfileFile { Profiles = { p } }, p);
 
         Assert.True(r.Succeeded, r.Message);
         Assert.Contains("IpAddress=192.168.1.80", g.Text("config.ini"));
-        Assert.Contains("IpAddress=192.168.1.80", g.Text("lmnfig.ini"));
+        Assert.Contains("IpAddress=192.168.1.69", g.Text("lmnfig.ini"));
+        Assert.DoesNotContain("IpAddress=192.168.1.80", g.Text("lmnfig.ini"));
         Assert.Contains("PCB_IpAddress=192.168.1.80", g.Text("SnowLauncher.ini"));
+        Assert.Contains("LM_IpAddress=192.168.1.69", g.Text("SnowLauncher.ini"));
         Assert.Single(g.Backups("config.ini"));
         Assert.Equal("192.168.1.80", p.PcbIp);
+        Assert.Equal("192.168.1.69", p.LmIp);
+        Assert.Contains(log, l => l.Contains("lmnfig.ini IpAddress left as 192.168.1.69"));
+        Assert.Contains(log, l => l.Contains("This PC's LAN IP (PCB):") && l.Contains("192.168.1.80"));
         Assert.Equal(new[] { "Card server", "Client" }, r.Started.Select(x => x.Role));
+    }
+
+    [Fact]
+    public async Task Start_keeps_secondary_lm_address_and_syncs_snowlauncher()
+    {
+        using var g = new TempGameFolder();
+        File.WriteAllText(g.P("lmnfig.ini"), TempGameFolder.Lm.Replace("192.168.1.69", "192.168.1.245"));
+        var (launcher, _, log) = Make(g);
+        var p = new LauncherProfile { Name = "Test", GameFolder = g.Root, CardServerPath = Path.Combine(g.Root, "3-Start-Server.bat"), SyncSnowLauncherIni = true };
+        var r = await launcher.StartAsync(new ProfileFile { Profiles = { p } }, p);
+
+        Assert.True(r.Succeeded, r.Message);
+        Assert.Contains("IpAddress=192.168.1.80", g.Text("config.ini"));
+        Assert.Contains("IpAddress=192.168.1.245", g.Text("lmnfig.ini"));
+        Assert.Contains("LM_IpAddress=192.168.1.245", g.Text("SnowLauncher.ini"));
+        Assert.Contains("PCB_IpAddress=192.168.1.80", g.Text("SnowLauncher.ini"));
+        Assert.Equal("192.168.1.245", p.LmIp);
+        Assert.Contains(log, l => l.Contains("lmnfig.ini IpAddress left as 192.168.1.245"));
+        Assert.Contains(log, l => l.Contains("SnowLauncher.ini LM_IpAddress: 192.168.1.69 → 192.168.1.245"));
     }
 
     [Fact]

@@ -104,3 +104,44 @@ public sealed class WindowsPortOwnerLookup : IPortOwnerLookup
         finally { Marshal.FreeHGlobal(buf); }
     }
 }
+
+
+/// <summary>Lists and stops Windows processes. Exe paths that cannot be read are listed without a path (and will not match a profile folder).</summary>
+public sealed class SystemProcessControl : IProcessControl
+{
+    public IReadOnlyList<RunningProcessInfo> List()
+    {
+        var list = new List<RunningProcessInfo>();
+        Process[] all;
+        try { all = Process.GetProcesses(); }
+        catch (Exception) { return list; }
+        foreach (var p in all)
+        {
+            try
+            {
+                string? path = null, name = null;
+                try { name = p.ProcessName; } catch (InvalidOperationException) { }
+                try { path = p.MainModule?.FileName; }
+                catch (Win32Exception) { }
+                catch (InvalidOperationException) { }
+                catch (NotSupportedException) { }
+                list.Add(new RunningProcessInfo(p.Id, path, name));
+            }
+            catch (Exception) { }
+            finally { p.Dispose(); }
+        }
+        return list;
+    }
+
+    public void KillTree(int pid)
+    {
+        try
+        {
+            using var p = Process.GetProcessById(pid);
+            if (!p.HasExited) p.Kill(entireProcessTree: true);
+        }
+        catch (ArgumentException) { }
+        catch (InvalidOperationException) { }
+        catch (Win32Exception) { }
+    }
+}

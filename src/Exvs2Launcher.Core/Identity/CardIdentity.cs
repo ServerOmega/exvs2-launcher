@@ -12,13 +12,27 @@ public sealed record CardIdentity(string AccessCode, string ChipId)
 
 public static partial class IdentityFormat
 {
-    [GeneratedRegex("^[0-9]{20}$")] private static partial Regex AccessCodeRx();
+    // Official Banapass-style codes are 20 decimal digits. Some working pack cards use 20 hex characters
+    // instead; both are accepted when reading an existing card.ini. New cards are still 20 digits.
+    [GeneratedRegex("^[0-9A-Fa-f]{20}$")] private static partial Regex AccessCodeRx();
     [GeneratedRegex("^[0-9A-F]{32}$")] private static partial Regex ChipIdRx();
     [GeneratedRegex("^[A-Za-z0-9]{4}$")] private static partial Regex SerialRx();
 
-    public static bool IsValidAccessCode(string? s) => s is not null && AccessCodeRx().IsMatch(s);
-    public static bool IsValidChipId(string? s) => s is not null && ChipIdRx().IsMatch(s);
+    public static bool IsValidAccessCode(string? s) => s is not null && AccessCodeRx().IsMatch(NormalizeIniValue(s));
+    public static bool IsValidChipId(string? s) => s is not null && ChipIdRx().IsMatch(NormalizeIniValue(s));
     public static bool IsValidSerial(string? s) => s is not null && SerialRx().IsMatch(s);
+
+    /// <summary>Trim whitespace and a single pair of wrapping quotes from an INI value.</summary>
+    public static string NormalizeIniValue(string? s)
+    {
+        if (s is null) return "";
+        var t = s.Trim();
+        if (t.Length >= 2 && t[0] == '"' && t[^1] == '"')
+            t = t[1..^1].Trim();
+        else if (t.Length >= 2 && t[0] == '\'' && t[^1] == '\'')
+            t = t[1..^1].Trim();
+        return t;
+    }
 }
 
 /// <summary>

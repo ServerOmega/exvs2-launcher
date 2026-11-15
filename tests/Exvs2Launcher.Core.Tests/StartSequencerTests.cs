@@ -72,14 +72,14 @@ public class StartSequencerTests
     private const string Game = "/games/Test";
     private const string Bat = "/mm/3-Start-Server.bat";
 
-    private static (StartSequencer, FakeWorld) Make(Action<FakeWorld>? setup = null)
+    private static (StartSequencer, FakeWorld) Make(Action<FakeWorld>? setup = null, IProcessControl? processes = null)
     {
         var w = new FakeWorld();
         w.Files.Add(Bat);
         w.Files.Add(Path.Combine(Game, "vsac29_Release.exe"));
         w.Files.Add(Path.Combine(Game, "vsac29_Release_LM.exe"));
         setup?.Invoke(w);
-        var seq = new StartSequencer(w, w, w, w, w.Files.Contains);
+        var seq = new StartSequencer(w, w, w, w, w.Files.Contains, processes);
         return (seq, w);
     }
 
@@ -291,5 +291,49 @@ public class StartSequencerTests
         Assert.Equal(expected, PortOwnerClassifier.Classify(true, new PortOwner(1, name, path), plan));
         Assert.Equal(PortOwnerKind.None, PortOwnerClassifier.Classify(false, null, plan));
         Assert.Equal(PortOwnerKind.Unknown, PortOwnerClassifier.Classify(true, null, plan));
+    }
+
+    [Fact]
+    public async Task StopRole_closes_only_that_component_and_folder_fallback()
+    {
+        var procs = new FakeProcessControl();
+        var otherLm = Path.Combine("/games/Other", "vsac29_Release_LM.exe");
+        procs.Running.Add(new RunningProcessInfo(500, otherLm, "vsac29_Release_LM"));
+        var (seq, w) = Make(processes: procs);
+        await seq.RunAsync(Plan());
+
+        Assert.Equal(1, seq.StopRole(ComponentRoles.Lm, Plan()));
+        Assert.True(w.Processes.Single(p => p.Role == "LM").Killed);
+        Assert.False(w.Processes.Single(p => p.Role == "Client").Killed);
+        Assert.False(w.Processes.Single(p => p.Role == "Card server").Killed);
+        Assert.DoesNotContain(500, procs.Killed); // other folder's LM is left alone
+
+        // Fallback: a client exe in this profile's folder that we did not start this session.
+        var clientPath = Path.GetFullPath(Path.Combine(Game, "vsac29_Release.exe"));
+        procs.Running.Add(new RunningProcessInfo(600, clientPath, "vsac29_Release"));
+        // Mark the started client as already exited so we use the path fallback.
+        w.Processes.Single(p => p.Role == "Client").Exited = true;
+        Assert.Equal(1, seq.StopRole(ComponentRoles.Client, Plan()));
+        Assert.Equal(new[] { 600 }, procs.Killed);
+
+        var lmStatus = seq.RoleStatus(ComponentRoles.Lm, Plan());
+        Assert.False(lmStatus.Running);
+        var serverStatus = seq.RoleStatus(ComponentRoles.CardServer, Plan());
+        Assert.True(serverStatus.Running);
+    }
+
+    [Fact]
+    public async Task Start_lm_only_does_not_require_the_card_server_port()
+    {
+        var (seq, w) = Make();
+        var plan = new StartPlan
+        {
+            GameFolder = Game, CardServerPath = Bat, StartCardServer = false, StartLm = true, StartClient = false,
+            RequireCardServerPort = false, PortTimeout = TimeSpan.FromSeconds(5), PollInterval = TimeSpan.FromSeconds(1),
+        };
+        var r = await seq.RunAsync(plan);
+        Assert.True(r.Succeeded, r.Message);
+        Assert.Equal(new[] { "LM" }, r.Started.Select(p => p.Role));
+        Assert.DoesNotContain(w.Events, e => e.StartsWith("start:Card server"));
     }
 }

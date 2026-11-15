@@ -1,32 +1,76 @@
 <Window x:Class="Exvs2Launcher.App.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="EXVS2 Launcher" Width="860" Height="820" MinWidth="720" MinHeight="600"
-        WindowStartupLocation="CenterScreen" Closing="Window_Closing">
+        Title="EXVS2 Launcher" Width="900" Height="900" MinWidth="760" MinHeight="680"
+        WindowStartupLocation="CenterScreen" Closing="Window_Closing"
+        ToolTipService.InitialShowDelay="700"
+        ToolTipService.ShowDuration="20000"
+        ToolTipService.BetweenShowDelay="200">
   <DockPanel Margin="10">
     <!-- Profile bar -->
     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-      <Label Content="Cab profile:" />
-      <ComboBox x:Name="ProfileBox" Width="260" Margin="0,0,6,0" DisplayMemberPath="Name" SelectionChanged="ProfileBox_SelectionChanged" />
-      <Button Content="New" Click="NewProfile_Click" />
-      <Button Content="Delete" Click="DeleteProfile_Click" />
-      <Button Content="Save" Click="Save_Click" />
-      <TextBlock x:Name="StoreText" VerticalAlignment="Center" Foreground="Gray" Margin="6,0,0,0" TextTrimming="CharacterEllipsis" />
+      <Label Content="Cab profile:" ToolTip="{StaticResource Tip.Profile}" />
+      <ComboBox x:Name="ProfileBox" Width="260" Margin="0,0,6,0" DisplayMemberPath="Name"
+                SelectionChanged="ProfileBox_SelectionChanged" ToolTip="{StaticResource Tip.Profile}" />
+      <Button Content="New" Click="NewProfile_Click" ToolTip="{StaticResource Tip.ProfileNew}" />
+      <Button Content="Delete" Click="DeleteProfile_Click" ToolTip="{StaticResource Tip.ProfileDelete}" />
+      <Button Content="Save" Click="Save_Click" ToolTip="{StaticResource Tip.ProfileSave}" />
+      <TextBlock x:Name="StoreText" VerticalAlignment="Center" Foreground="Gray" Margin="6,0,0,0"
+                 TextTrimming="CharacterEllipsis" ToolTip="{StaticResource Tip.ProfileStore}" />
     </StackPanel>
 
-    <!-- Start bar -->
+    <!-- Start / stop bar -->
     <Border DockPanel.Dock="Top" Margin="0,8,0,0" Padding="8" Background="#FFF3F6FA" BorderBrush="#FFCBD5E1" BorderThickness="1" CornerRadius="3">
-      <StackPanel Orientation="Horizontal">
-        <Button x:Name="StartButton" Content="Start" FontWeight="Bold" MinWidth="100" Click="Start_Click" />
-        <Button x:Name="CancelButton" Content="Cancel" IsEnabled="False" Click="Cancel_Click" />
-        <Button Content="Stop game" Click="StopGame_Click" ToolTip="Close the LM and client this launcher started. The card server keeps running." />
-        <Button Content="Stop all" Click="StopAll_Click" ToolTip="Also close the card server this launcher started." />
-        <Button Content="Check port" Click="CheckPort_Click" ToolTip="Show what is listening on the card server port." />
-        <TextBlock x:Name="StageText" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="SemiBold" Text="Idle" />
+      <StackPanel>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+          <Button x:Name="StartButton" Content="Start all" FontWeight="Bold" MinWidth="100"
+                  Click="Start_Click" ToolTip="{StaticResource Tip.StartAll}" />
+          <Button x:Name="CancelButton" Content="Cancel" IsEnabled="False" Click="Cancel_Click"
+                  ToolTip="{StaticResource Tip.Cancel}" />
+          <Button x:Name="StopAllButton" Content="Stop all" Click="StopAll_Click"
+                  ToolTip="{StaticResource Tip.StopAll}" />
+          <Button Content="Check port" Click="CheckPort_Click" ToolTip="{StaticResource Tip.CheckPort}" />
+          <TextBlock x:Name="StageText" VerticalAlignment="Center" Margin="10,0,0,0" FontWeight="SemiBold" Text="Idle" />
+        </StackPanel>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="110" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition /><RowDefinition /><RowDefinition />
+          </Grid.RowDefinitions>
+
+          <Label Grid.Row="0" Content="Card server" ToolTip="{StaticResource Tip.StartCard}" />
+          <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CardStatusText" VerticalAlignment="Center"
+                     Text="Stopped" ToolTip="{StaticResource Tip.ComponentStatus}" />
+          <Button Grid.Row="0" Grid.Column="2" x:Name="StartCardButton" Content="Start" Click="StartCard_Click"
+                  ToolTip="{StaticResource Tip.StartCard}" />
+          <Button Grid.Row="0" Grid.Column="3" x:Name="StopCardButton" Content="Stop" Click="StopCard_Click"
+                  ToolTip="{StaticResource Tip.StopCard}" />
+
+          <Label Grid.Row="1" Content="LM" ToolTip="{StaticResource Tip.StartLm}" />
+          <TextBlock Grid.Row="1" Grid.Column="1" x:Name="LmStatusText" VerticalAlignment="Center"
+                     Text="Stopped" ToolTip="{StaticResource Tip.ComponentStatus}" />
+          <Button Grid.Row="1" Grid.Column="2" x:Name="StartLmButton" Content="Start" Click="StartLm_Click"
+                  ToolTip="{StaticResource Tip.StartLm}" />
+          <Button Grid.Row="1" Grid.Column="3" x:Name="StopLmButton" Content="Stop" Click="StopLm_Click"
+                  ToolTip="{StaticResource Tip.StopLm}" />
+
+          <Label Grid.Row="2" Content="Client" ToolTip="{StaticResource Tip.StartClient}" />
+          <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ClientStatusText" VerticalAlignment="Center"
+                     Text="Stopped" ToolTip="{StaticResource Tip.ComponentStatus}" />
+          <Button Grid.Row="2" Grid.Column="2" x:Name="StartClientButton" Content="Start" Click="StartClient_Click"
+                  ToolTip="{StaticResource Tip.StartClient}" />
+          <Button Grid.Row="2" Grid.Column="3" x:Name="StopClientButton" Content="Stop" Click="StopClient_Click"
+                  ToolTip="{StaticResource Tip.StopClient}" />
+        </Grid>
       </StackPanel>
     </Border>
 
-    <ScrollViewer DockPanel.Dock="Top" VerticalScrollBarVisibility="Auto" MaxHeight="520">
+    <ScrollViewer DockPanel.Dock="Top" VerticalScrollBarVisibility="Auto" MaxHeight="500">
       <StackPanel>
         <GroupBox Header="Cab">
           <Grid>
@@ -38,37 +82,43 @@
             <Grid.RowDefinitions>
               <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
             </Grid.RowDefinitions>
-            <Label Grid.Row="0" Content="Name" />
-            <TextBox Grid.Row="0" Grid.Column="1" x:Name="NameBox" />
+            <Label Grid.Row="0" Content="Name" ToolTip="{StaticResource Tip.Name}" />
+            <TextBox Grid.Row="0" Grid.Column="1" x:Name="NameBox" ToolTip="{StaticResource Tip.Name}" />
 
-            <Label Grid.Row="1" Content="Game folder" />
-            <TextBox Grid.Row="1" Grid.Column="1" x:Name="GameFolderBox" LostFocus="GameFolderBox_LostFocus" />
-            <Button Grid.Row="1" Grid.Column="2" Content="Browse..." Click="BrowseGame_Click" />
+            <Label Grid.Row="1" Content="Game folder" ToolTip="{StaticResource Tip.GameFolder}" />
+            <TextBox Grid.Row="1" Grid.Column="1" x:Name="GameFolderBox" LostFocus="GameFolderBox_LostFocus"
+                     ToolTip="{StaticResource Tip.GameFolder}" />
+            <Button Grid.Row="1" Grid.Column="2" Content="Browse..." Click="BrowseGame_Click"
+                    ToolTip="{StaticResource Tip.GameFolderBrowse}" />
 
-            <Label Grid.Row="2" Content="Patched card server" />
-            <TextBox Grid.Row="2" Grid.Column="1" x:Name="ServerPathBox"
-                     ToolTip="Server-Infinite.exe or 3-Start-Server.bat from exvs2-matchmaking. Never the pack's server\Server.exe." />
-            <Button Grid.Row="2" Grid.Column="2" Content="Browse..." Click="BrowseServer_Click" />
+            <Label Grid.Row="2" Content="Patched card server" ToolTip="{StaticResource Tip.CardServerPath}" />
+            <StackPanel Grid.Row="2" Grid.Column="1">
+              <TextBox x:Name="ServerPathBox" LostFocus="ServerPathBox_LostFocus"
+                       ToolTip="{StaticResource Tip.CardServerPath}" />
+              <TextBlock x:Name="ServerVersionText" Foreground="Gray" TextWrapping="Wrap" FontSize="11" Margin="0,2,0,0" />
+            </StackPanel>
+            <Button Grid.Row="2" Grid.Column="2" Content="Browse..." Click="BrowseServer_Click"
+                    ToolTip="{StaticResource Tip.CardServerBrowse}" />
 
-            <Label Grid.Row="3" Content="Server arguments" />
-            <TextBox Grid.Row="3" Grid.Column="1" x:Name="ServerArgsBox" ToolTip="Usually empty." />
+            <Label Grid.Row="3" Content="Server arguments" ToolTip="{StaticResource Tip.ServerArgs}" />
+            <TextBox Grid.Row="3" Grid.Column="1" x:Name="ServerArgsBox" ToolTip="{StaticResource Tip.ServerArgs}" />
 
-            <Label Grid.Row="4" Content="Start" />
+            <Label Grid.Row="4" Content="Start" ToolTip="{StaticResource Tip.StartAll}" />
             <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal">
-              <CheckBox x:Name="StartServerCheck" Content="Card server" />
-              <CheckBox x:Name="StartLmCheck" Content="LM (vsac29_Release_LM.exe)" />
-              <CheckBox x:Name="StartClientCheck" Content="Client (vsac29_Release.exe)" />
+              <CheckBox x:Name="StartServerCheck" Content="Card server" ToolTip="{StaticResource Tip.StartCardCheck}" />
+              <CheckBox x:Name="StartLmCheck" Content="LM (vsac29_Release_LM.exe)" ToolTip="{StaticResource Tip.StartLmCheck}" />
+              <CheckBox x:Name="StartClientCheck" Content="Client (vsac29_Release.exe)" ToolTip="{StaticResource Tip.StartClientCheck}" />
             </StackPanel>
 
-            <Label Grid.Row="5" Content="Card server address" />
+            <Label Grid.Row="5" Content="Card server address" ToolTip="{StaticResource Tip.CardServerHost}" />
             <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal">
-              <TextBox x:Name="HostBox" Width="110" />
+              <TextBox x:Name="HostBox" Width="110" ToolTip="{StaticResource Tip.CardServerHost}" />
               <TextBlock Text=":" VerticalAlignment="Center" Margin="0,0,6,0" />
-              <TextBox x:Name="PortBox" Width="60" />
-              <Label Content="wait up to (s)" Margin="10,0,0,0" />
-              <TextBox x:Name="TimeoutBox" Width="45" />
-              <Label Content="LM → client delay (s)" Margin="10,0,0,0" />
-              <TextBox x:Name="DelayBox" Width="40" />
+              <TextBox x:Name="PortBox" Width="60" ToolTip="{StaticResource Tip.CardServerPort}" />
+              <Label Content="wait up to (s)" Margin="10,0,0,0" ToolTip="{StaticResource Tip.PortTimeout}" />
+              <TextBox x:Name="TimeoutBox" Width="45" ToolTip="{StaticResource Tip.PortTimeout}" />
+              <Label Content="LM → client delay (s)" Margin="10,0,0,0" ToolTip="{StaticResource Tip.LmDelay}" />
+              <TextBox x:Name="DelayBox" Width="40" ToolTip="{StaticResource Tip.LmDelay}" />
             </StackPanel>
           </Grid>
         </GroupBox>
@@ -83,22 +133,28 @@
             <Grid.RowDefinitions>
               <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
             </Grid.RowDefinitions>
-            <Label Grid.Row="0" Content="Serial (config.ini)" />
-            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SerialText" VerticalAlignment="Center" FontFamily="Consolas" />
-            <Button Grid.Row="0" Grid.Column="2" Content="New serial" Click="NewSerial_Click" />
+            <Label Grid.Row="0" Content="Serial (config.ini)" ToolTip="{StaticResource Tip.Serial}" />
+            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="SerialText" VerticalAlignment="Center" FontFamily="Consolas"
+                       ToolTip="{StaticResource Tip.Serial}" />
+            <Button Grid.Row="0" Grid.Column="2" Content="New serial" Click="NewSerial_Click"
+                    ToolTip="{StaticResource Tip.NewSerial}" />
 
-            <Label Grid.Row="1" Content="Card (card.ini)" />
-            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CardText" VerticalAlignment="Center" />
-            <Button Grid.Row="1" Grid.Column="2" Content="New card" Click="NewCard_Click" />
+            <Label Grid.Row="1" Content="Card (card.ini)" ToolTip="{StaticResource Tip.Card}" />
+            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CardText" VerticalAlignment="Center"
+                       ToolTip="{StaticResource Tip.Card}" />
+            <Button Grid.Row="1" Grid.Column="2" Content="New card" Click="NewCard_Click"
+                    ToolTip="{StaticResource Tip.NewCard}" />
 
-            <Label Grid.Row="2" Content="Access code prefix" />
+            <Label Grid.Row="2" Content="Access code prefix" ToolTip="{StaticResource Tip.AccessPrefix}" />
             <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
-              <TextBox x:Name="PrefixBox" Width="60" ToolTip="Optional digits at the start of new access codes, e.g. 99 for a P2 cab." />
-              <TextBlock Text="optional, e.g. 99" Foreground="Gray" VerticalAlignment="Center" />
+              <TextBox x:Name="PrefixBox" Width="60" ToolTip="{StaticResource Tip.AccessPrefix}" />
+              <TextBlock Text="optional, e.g. 99" Foreground="Gray" VerticalAlignment="Center"
+                         ToolTip="{StaticResource Tip.AccessPrefix}" />
             </StackPanel>
 
             <CheckBox Grid.Row="3" Grid.Column="1" x:Name="SyncSnowCheck"
-                      Content="Also update SnowLauncher.ini if it exists (so SnowLauncher won't put old values back)" />
+                      Content="Also update SnowLauncher.ini if it exists (so SnowLauncher won't put old values back)"
+                      ToolTip="{StaticResource Tip.SyncSnow}" />
           </Grid>
         </GroupBox>
 
@@ -112,26 +168,33 @@
             <Grid.RowDefinitions>
               <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
             </Grid.RowDefinitions>
-            <CheckBox Grid.Row="0" Grid.Column="1" x:Name="AutoIpCheck" Content="Detect this PC's LAN IP on every Start" />
-            <Button Grid.Row="0" Grid.Column="2" Content="Detect now" Click="DetectIp_Click" />
+            <CheckBox Grid.Row="0" Grid.Column="1" x:Name="AutoIpCheck"
+                      Content="Detect this PC's LAN IP for the PCB (client) on every Start"
+                      ToolTip="{StaticResource Tip.AutoDetectIp}" />
+            <Button Grid.Row="0" Grid.Column="2" Content="Detect now" Click="DetectIp_Click"
+                    ToolTip="{StaticResource Tip.DetectNow}" />
 
-            <Label Grid.Row="1" Content="PCB (client) IP" />
-            <ComboBox Grid.Row="1" Grid.Column="1" x:Name="PcbIpBox" IsEditable="True" Margin="0,2,6,2" />
+            <Label Grid.Row="1" Content="PCB (client) IP" ToolTip="{StaticResource Tip.PcbIp}" />
+            <ComboBox Grid.Row="1" Grid.Column="1" x:Name="PcbIpBox" IsEditable="True" Margin="0,2,6,2"
+                      ToolTip="{StaticResource Tip.PcbIp}" />
 
-            <Label Grid.Row="2" Content="LM IP" />
-            <ComboBox Grid.Row="2" Grid.Column="1" x:Name="LmIpBox" IsEditable="True" Margin="0,2,6,2" />
-            <Button Grid.Row="2" Grid.Column="2" Content="Write IPs" Click="WriteIps_Click" />
+            <Label Grid.Row="2" Content="LM IP" ToolTip="{StaticResource Tip.LmIp}" />
+            <ComboBox Grid.Row="2" Grid.Column="1" x:Name="LmIpBox" IsEditable="True" Margin="0,2,6,2"
+                      ToolTip="{StaticResource Tip.LmIp}" />
+            <Button Grid.Row="2" Grid.Column="2" Content="Write IPs" Click="WriteIps_Click"
+                    ToolTip="{StaticResource Tip.WriteIps}" />
 
-            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CurrentIpText" Foreground="Gray" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CurrentIpText" TextWrapping="Wrap"
+                       ToolTip="{StaticResource Tip.CurrentIps}" />
           </Grid>
         </GroupBox>
       </StackPanel>
     </ScrollViewer>
 
     <DockPanel Margin="0,8,0,0">
-      <TextBlock DockPanel.Dock="Top" Text="Log" FontWeight="SemiBold" />
+      <TextBlock DockPanel.Dock="Top" Text="Log" FontWeight="SemiBold" ToolTip="{StaticResource Tip.Log}" />
       <TextBox x:Name="LogBox" IsReadOnly="True" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"
-               VerticalScrollBarVisibility="Auto" Margin="0,2,0,0" />
+               VerticalScrollBarVisibility="Auto" Margin="0,2,0,0" ToolTip="{StaticResource Tip.Log}" />
     </DockPanel>
   </DockPanel>
 </Window>

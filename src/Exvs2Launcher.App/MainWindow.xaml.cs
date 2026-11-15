@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using Exvs2Launcher.Core.Files;
 using Exvs2Launcher.Core.Identity;
 using Exvs2Launcher.Core.Launch;
@@ -23,8 +24,11 @@ public partial class MainWindow : Window
     private readonly string _logFile;
     private ProfileFile _file = new();
     private LauncherProfile? _current;
+    private string? _folderWhenShown;
     private bool _loading;
+    private bool _starting;
     private CancellationTokenSource? _startCts;
+    private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
 
     public MainWindow()
     {
@@ -39,10 +43,20 @@ public partial class MainWindow : Window
         StoreText.Text = "Profiles: " + _store.FilePath;
         try { _file = _store.Load(); }
         catch (Exception ex) { Log("Could not read profiles (" + ex.Message + "). Starting with an empty list."); }
-        if (_file.Profiles.Count == 0) _file.Profiles.Add(new LauncherProfile { Name = "Test cab" });
+        if (_file.Profiles.Count == 0)
+        {
+            var first = new LauncherProfile { Name = "Test cab" };
+            _file.Profiles.Add(first);
+            var assigned = SerialAssignment.ForNewProfile(_file, first, _ids, _writer);
+            Log(assigned.Message);
+            try { _store.Save(_file); } catch (Exception ex) { Log("Could not save the first-run profile: " + ex.Message); }
+        }
         RefreshProfileBox(_file.Profiles.FirstOrDefault(p => p.Name == _file.LastSelected) ?? _file.Profiles[0]);
         FillNics();
         Log("EXVS2 Launcher " + typeof(MainWindow).Assembly.GetName().Version + " ready. Card values are never shown or logged.");
+        _statusTimer.Tick += (_, _) => RefreshComponentStatus();
+        _statusTimer.Start();
+        RefreshComponentStatus();
     }
 
     // ---------- profile <-> form ----------
@@ -77,6 +91,7 @@ public partial class MainWindow : Window
         AutoIpCheck.IsChecked = p.AutoDetectIp;
         PcbIpBox.Text = p.PcbIp ?? "";
         LmIpBox.Text = p.LmIp ?? "";
+        _folderWhenShown = p.GameFolder;
         _loading = false;
         RefreshGameState();
     }
@@ -141,7 +156,12 @@ public partial class MainWindow : Window
             SerialText.Text = (s.Serial ?? "(no serial in config.ini)") +
                 (s.SnowLauncherSerial is not null && s.SnowLauncherSerial != s.Serial ? $"   (SnowLauncher.ini has {s.SnowLauncherSerial})" : "");
             CardText.Text = !s.CardPresent ? "No card in card.ini" : s.CardValid ? "Card present (values hidden)" : "Card present but not in the expected format";
-            CurrentIpText.Text = $"In the files now: config.ini IpAddress={s.ClientIp ?? "-"}, lmnfig.ini IpAddress={s.LmIp ?? "-"}, Server={s.ClientServer ?? "-"}";
+            CurrentIpText.Text = $"In the files now: config.ini IpAddress={s.ClientIp ?? "-"} (PCB), lmnfig.ini IpAddress={s.LmIp ?? "-"} (LM; authoritative), Server={s.ClientServer ?? "-"}";
+            CurrentIpText.Foreground = System.Windows.Media.Brushes.Gray;
+            if (NetworkBinding.SameIp(s.ClientIp, s.LmIp) && s.ClientIp is not null)
+            {
+                CurrentIpText.Text += "  Note: PCB and LM share this address, which is fine for a single cab. Use a separate LM address if you run more than one cab or LM on this PC.";
+            }
             if (_current is not null && s.Serial is not null) _current.Serial = s.Serial;
             if (_current is not null)
             {
@@ -150,6 +170,8 @@ public partial class MainWindow : Window
             }
         }
         catch (Exception ex) { SerialText.Text = "Could not read the game files: " + ex.Message; }
+        RefreshServerVersion();
+        RefreshComponentStatus();
     }
 
     // ---------- profile buttons ----------
@@ -166,6 +188,8 @@ public partial class MainWindow : Window
         ReadForm();
         var p = new LauncherProfile { Name = "Cab " + (_file.Profiles.Count + 1) };
         _file.Profiles.Add(p);
+        var assigned = SerialAssignment.ForNewProfile(_file, p, _ids, _writer);
+        Log(assigned.Message);
         RefreshProfileBox(p);
     }
 
@@ -175,7 +199,12 @@ public partial class MainWindow : Window
         if (MessageBox.Show(this, $"Delete the profile \"{_current.Name}\"? The game folder is not touched.", "Delete profile",
                 MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
         _file.Profiles.Remove(_current);
-        if (_file.Profiles.Count == 0) _file.Profiles.Add(new LauncherProfile { Name = "Test cab" });
+        if (_file.Profiles.Count == 0)
+        {
+            var first = new LauncherProfile { Name = "Test cab" };
+            _file.Profiles.Add(first);
+            Log(SerialAssignment.ForNewProfile(_file, first, _ids, _writer).Message);
+        }
         _current = null;
         RefreshProfileBox(_file.Profiles[0]);
         SaveAll();
@@ -196,10 +225,37 @@ public partial class MainWindow : Window
         GameFolderBox.Text = g.Root;
         if (string.IsNullOrWhiteSpace(NameBox.Text) || NameBox.Text.StartsWith("Cab ") || NameBox.Text == "New cab")
             NameBox.Text = Path.GetFileName(g.Root);
+        ApplySerialForChosenFolder();
         RefreshGameState();
     }
 
-    private void GameFolderBox_LostFocus(object sender, RoutedEventArgs e) { if (!_loading) RefreshGameState(); }
+    private void GameFolderBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        ApplySerialForChosenFolder();
+        RefreshGameState();
+    }
+
+    /// <summary>
+    /// Adopts a unique serial already in the folder, or writes a new one only when the folder has no serial
+    /// or that serial belongs to another profile. Never replaces a unique existing folder serial.
+    /// </summary>
+    private void ApplySerialForChosenFolder()
+    {
+        if (!ReadForm() || _current is null) return;
+        var folder = GameFolderBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return;
+        if (string.Equals(folder, _folderWhenShown, StringComparison.OrdinalIgnoreCase)) return;
+        try
+        {
+            var decision = SerialAssignment.ForGameFolder(_file, _current, _ids, _writer, writeIfNeeded: true);
+            Log(decision.Message);
+            if (decision.Write is not null) Report("Serial " + decision.Serial, decision.Write);
+            _folderWhenShown = folder;
+            SaveAll(quiet: true);
+        }
+        catch (Exception ex) { Log("Could not assign a serial for this folder: " + ex.Message); }
+    }
 
     private void BrowseServer_Click(object sender, RoutedEventArgs e)
     {
@@ -215,6 +271,31 @@ public partial class MainWindow : Window
             return;
         }
         ServerPathBox.Text = dlg.FileName;
+        RefreshServerVersion();
+    }
+
+    private void ServerPathBox_LostFocus(object sender, RoutedEventArgs e) { if (!_loading) RefreshServerVersion(); }
+
+    private void RefreshServerVersion()
+    {
+        var path = ServerPathBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            ServerVersionText.Text = "";
+            ServerVersionText.Foreground = System.Windows.Media.Brushes.Gray;
+            return;
+        }
+        var info = CardServerInspector.Inspect(path);
+        if (info.Summary is null && info.Warning is null)
+        {
+            ServerVersionText.Text = "";
+            return;
+        }
+        ServerVersionText.Text = (info.Warning is not null ? "⚠ " + info.Warning : "Card server " + info.Summary)
+                                 + (info.Source is not null && info.Warning is null ? " (from " + info.Source + ")" : "");
+        ServerVersionText.Foreground = info.LooksOld
+            ? System.Windows.Media.Brushes.DarkGoldenrod
+            : System.Windows.Media.Brushes.Gray;
     }
 
     // ---------- identity ----------
@@ -292,11 +373,26 @@ public partial class MainWindow : Window
     private void DetectIp_Click(object sender, RoutedEventArgs e)
     {
         FillNics();
-        var best = LanAddressDetector.PickBest(LanAddressDetector.Enumerate());
+        var nics = LanAddressDetector.Enumerate();
+        var best = LanAddressDetector.PickBest(nics);
         if (best is null) { Warn("No active IPv4 network adapter found."); return; }
         PcbIpBox.Text = best.Address;
-        LmIpBox.Text = best.Address;
-        Log("Detected LAN IP " + best.Display);
+        Log("Detected LAN IP for the PCB (client): " + best.Display + ". LM IP was not changed.");
+        // If the LM box is empty, offer the existing lmnfig.ini address when it is local, otherwise leave it
+        // for the user to pick. Never copy the detected PCB IP into the LM box.
+        if (string.IsNullOrWhiteSpace(IpFrom(LmIpBox.Text)) && Directory.Exists(GameFolderBox.Text.Trim()))
+        {
+            try
+            {
+                var existing = _writer.Read(GameFolderBox.Text.Trim()).LmIp;
+                if (existing is not null && NetworkBinding.FindLocal(existing, nics) is not null)
+                {
+                    LmIpBox.Text = existing;
+                    Log("LM IP filled from lmnfig.ini: " + existing + ".");
+                }
+            }
+            catch (Exception ex) { Log("Could not read lmnfig.ini: " + ex.Message); }
+        }
     }
 
     private void WriteIps_Click(object sender, RoutedEventArgs e)
@@ -304,7 +400,9 @@ public partial class MainWindow : Window
         if (!ReadForm() || !GameFilesWritable(out var folder)) return;
         try
         {
-            var r = _writer.ApplyNetwork(folder, _current!.PcbIp, _current.LmIp, _current.ServerAddress, _current.SyncSnowLauncherIni);
+            if (NetworkBinding.SameIp(_current!.PcbIp, _current.LmIp) && _current.PcbIp is not null)
+                Log(NetworkBinding.SameAddressNote);
+            var r = _writer.ApplyNetwork(folder, _current.PcbIp, _current.LmIp, _current.ServerAddress, _current.SyncSnowLauncherIni);
             Report("IPs written", r);
             SaveAll(quiet: true);
         }
@@ -317,44 +415,132 @@ public partial class MainWindow : Window
     private async void Start_Click(object sender, RoutedEventArgs e)
     {
         if (!SaveAll(quiet: true)) return;
-        StartButton.IsEnabled = false;
+        await RunStart(() => _launcher.StartAsync(_file, _current!, _startCts!.Token), $"--- Start all \"{_current!.Name}\" ---");
+    }
+
+    private async void StartCard_Click(object sender, RoutedEventArgs e) => await StartRole(ComponentRoles.CardServer);
+    private async void StartLm_Click(object sender, RoutedEventArgs e) => await StartRole(ComponentRoles.Lm);
+    private async void StartClient_Click(object sender, RoutedEventArgs e) => await StartRole(ComponentRoles.Client);
+
+    private async Task StartRole(string role)
+    {
+        if (!SaveAll(quiet: true) || _current is null) return;
+        await RunStart(() => _launcher.StartRoleAsync(_current, role, _startCts!.Token), $"--- Start {role} \"{_current.Name}\" ---");
+    }
+
+    private async Task RunStart(Func<Task<StartOutcome>> start, string header)
+    {
+        _starting = true;
+        SetStartStopEnabled();
         CancelButton.IsEnabled = true;
         _startCts = new CancellationTokenSource();
         try
         {
-            Log($"--- Start \"{_current!.Name}\" ---");
-            var outcome = await _launcher.StartAsync(_file, _current, _startCts.Token);
+            Log(header);
+            var outcome = await start();
             if (!outcome.Succeeded && outcome.FinalStage != StartStage.Cancelled)
             {
                 Log(outcome.Message);
                 StageText.Text = "Failed";
             }
             SaveAll(quiet: true);
-            ShowProfile(_current);
+            if (_current is not null) ShowProfile(_current);
         }
         catch (Exception ex) { Warn("Start failed: " + ex.Message); }
         finally
         {
-            StartButton.IsEnabled = true;
+            _starting = false;
             CancelButton.IsEnabled = false;
+            RefreshComponentStatus();
         }
     }
 
     private void Cancel_Click(object sender, RoutedEventArgs e) => _startCts?.Cancel();
 
-    private void StopGame_Click(object sender, RoutedEventArgs e)
+    private void StopCard_Click(object sender, RoutedEventArgs e) => StopRole(ComponentRoles.CardServer);
+    private void StopLm_Click(object sender, RoutedEventArgs e) => StopRole(ComponentRoles.Lm);
+    private void StopClient_Click(object sender, RoutedEventArgs e) => StopRole(ComponentRoles.Client);
+
+    private void StopRole(string role)
     {
-        int n = _launcher.Sequencer.Stop(includeCardServer: false);
-        Log(n == 0 ? "Nothing to stop (only programs this launcher started can be stopped)." : $"Stopped {n} program(s).");
+        if (_current is null) return;
+        var plan = StatusPlan();
+        if (plan is null) return;
+        int n = _launcher.Sequencer.StopRole(role, plan);
+        if (n == 0) Log($"{role} is not running for this profile.");
+        RefreshComponentStatus();
     }
 
     private void StopAll_Click(object sender, RoutedEventArgs e)
     {
-        if (MessageBox.Show(this, "Close the LM, client AND the card server this launcher started?\n\nDon't do this while someone is mid-match on this card server.",
+        if (_current is null) return;
+        if (MessageBox.Show(this, "Close this profile's Live Monitor, game, AND card server?\n\nOther cab folders are left alone. Don't do this while someone is mid-match on this card server.",
                 "Stop all", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
-        int n = _launcher.Sequencer.Stop(includeCardServer: true);
-        Log(n == 0 ? "Nothing to stop (only programs this launcher started can be stopped)." : $"Stopped {n} program(s).");
+        var plan = StatusPlan();
+        if (plan is null) return;
+        int n = 0;
+        foreach (var role in new[] { ComponentRoles.Client, ComponentRoles.Lm, ComponentRoles.CardServer })
+            n += _launcher.Sequencer.StopRole(role, plan);
+        Log(n == 0 ? "Nothing to stop for this profile." : $"Stopped {n} program(s) for this profile.");
+        RefreshComponentStatus();
     }
+
+    private StartPlan? StatusPlan()
+    {
+        if (_current is null) return null;
+        var folder = GameFolderBox.Text.Trim();
+        var server = ServerPathBox.Text.Trim();
+        var basePlan = _current.ToStartPlan();
+        return new StartPlan
+        {
+            GameFolder = string.IsNullOrWhiteSpace(folder) ? basePlan.GameFolder : folder,
+            CardServerPath = string.IsNullOrWhiteSpace(server) ? basePlan.CardServerPath : server,
+            CardServerArguments = basePlan.CardServerArguments,
+            StartCardServer = true,
+            StartLm = true,
+            StartClient = true,
+            Host = basePlan.Host,
+            Port = basePlan.Port,
+            PortTimeout = basePlan.PortTimeout,
+            PollInterval = basePlan.PollInterval,
+            LmToClientDelay = basePlan.LmToClientDelay,
+        };
+    }
+
+    private void RefreshComponentStatus()
+    {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(RefreshComponentStatus); return; }
+        var plan = StatusPlan();
+        ComponentStatus card = new(ComponentRoles.CardServer, false, null, null);
+        ComponentStatus lm = new(ComponentRoles.Lm, false, null, null);
+        ComponentStatus client = new(ComponentRoles.Client, false, null, null);
+        if (plan is not null)
+        {
+            try
+            {
+                card = _launcher.Sequencer.RoleStatus(ComponentRoles.CardServer, plan);
+                lm = _launcher.Sequencer.RoleStatus(ComponentRoles.Lm, plan);
+                client = _launcher.Sequencer.RoleStatus(ComponentRoles.Client, plan);
+            }
+            catch (Exception ex) { Log("Could not refresh program status: " + ex.Message); }
+        }
+        ApplyStatus(CardStatusText, StartCardButton, StopCardButton, card);
+        ApplyStatus(LmStatusText, StartLmButton, StopLmButton, lm);
+        ApplyStatus(ClientStatusText, StartClientButton, StopClientButton, client);
+        StartButton.IsEnabled = !_starting;
+        StopAllButton.IsEnabled = !_starting && (card.Running || lm.Running || client.Running);
+        CancelButton.IsEnabled = _starting;
+    }
+
+    private void ApplyStatus(TextBlock label, Button start, Button stop, ComponentStatus status)
+    {
+        label.Text = status.Label;
+        label.FontWeight = status.Running ? FontWeights.SemiBold : FontWeights.Normal;
+        start.IsEnabled = !_starting && !status.Running;
+        stop.IsEnabled = !_starting && status.Running;
+    }
+
+    private void SetStartStopEnabled() => RefreshComponentStatus();
 
     private async void CheckPort_Click(object sender, RoutedEventArgs e)
     {
@@ -375,6 +561,7 @@ public partial class MainWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        _statusTimer.Stop();
         try { ReadForm(); _file.LastSelected = _current?.Name; _store.Save(_file); } catch { }
     }
 

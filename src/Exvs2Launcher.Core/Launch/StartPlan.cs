@@ -16,6 +16,11 @@ public sealed class StartPlan
     public TimeSpan LmToClientDelay { get; init; } = TimeSpan.FromSeconds(3);
     /// <summary>If our patched server already holds the port, use it instead of failing.</summary>
     public bool ReuseRunningPatchedServer { get; init; } = true;
+    /// <summary>
+    /// When false, starting only the LM or client does not fail just because the card server port is free.
+    /// "Start all" leaves this true so a missing card server is still an error.
+    /// </summary>
+    public bool RequireCardServerPort { get; init; } = true;
 }
 
 public enum StartStage

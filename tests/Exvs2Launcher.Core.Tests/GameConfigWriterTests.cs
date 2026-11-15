@@ -187,4 +187,72 @@ public class GameConfigWriterTests
         Assert.Contains("ZZZZ", taken, StringComparer.OrdinalIgnoreCase);
         Assert.Equal(new[] { "B" }, SerialRegistry.Duplicates(file, pa, "jZJj"));
     }
+
+
+    [Fact]
+    public void Reads_card_ini_with_exact_accessCode_chipId_layout()
+    {
+        // Layout matching a real card.ini (values are fake).
+        const string exact =
+            "[card]\r\naccessCode=11112222333344445555\r\nchipId=0123456789ABCDEF0123456789ABCDEF\r\n";
+        using var g = new TempGameFolder(withSnow: false);
+        File.WriteAllText(g.P("card.ini"), exact);
+        var s = Writer().Read(g.Root);
+        Assert.True(s.CardPresent);
+        Assert.True(s.CardValid);
+    }
+
+    [Theory]
+    [InlineData("[card]\nAccessCode=11112222333344445555\nChipId=0123456789ABCDEF0123456789ABCDEF\n")]
+    [InlineData("[card]\nACCESSCODE=11112222333344445555\nCHIPID=0123456789ABCDEF0123456789ABCDEF\n")]
+    [InlineData("[CARD]\naccesscode = 11112222333344445555\nchipid = 0123456789ABCDEF0123456789ABCDEF\n")]
+    public void Reads_card_ini_keys_case_insensitively(string body)
+    {
+        using var g = new TempGameFolder(withSnow: false);
+        File.WriteAllText(g.P("card.ini"), body);
+        var s = Writer().Read(g.Root);
+        Assert.True(s.CardValid, "card.ini should be valid regardless of accessCode/AccessCode and chipId/ChipId spelling");
+    }
+
+    [Fact]
+    public void Reads_card_ini_with_twenty_character_hex_access_code()
+    {
+        // Some working pack cards use 20 hex characters for accessCode, not 20 decimal digits.
+        const string body =
+            "[card]\r\naccessCode=ABCDEF0123456789ABCD\r\nchipId=0123456789ABCDEF0123456789ABCDEF\r\n";
+        using var g = new TempGameFolder(withSnow: false);
+        File.WriteAllText(g.P("card.ini"), body);
+        var s = Writer().Read(g.Root);
+        Assert.True(s.CardPresent);
+        Assert.True(s.CardValid);
+        Assert.DoesNotContain("ABCDEF0123456789ABCD", s.ToString());
+    }
+
+    [Fact]
+    public void Writing_a_new_card_preserves_AccessCode_ChipId_spelling()
+    {
+        using var g = new TempGameFolder(withSnow: false);
+        File.WriteAllText(g.P("card.ini"), "[card]\r\nAccessCode=11112222333344445555\r\nChipId=0123456789ABCDEF0123456789ABCDEF\r\n");
+        var card = new IdentityGenerator().NewCard();
+        Writer().ApplyCard(g.Root, card, false);
+        Assert.Equal($"[card]\r\nAccessCode={card.AccessCode}\r\nChipId={card.ChipId}\r\n", g.Text("card.ini"));
+    }
+
+    [Fact]
+    public void Network_logs_ip_diff_and_leaves_unchanged_lm_ip()
+    {
+        using var g = new TempGameFolder();
+        var r = Writer().ApplyNetwork(g.Root, "192.168.1.69", "192.168.1.69", "127.0.0.1:28080", true);
+        // Temp folder starts with both IPs at .69; only config may stay, lmnfig stays, notes must say "left as".
+        Assert.Contains(r.Notes, n => n.Contains("lmnfig.ini") && n.Contains("left as 192.168.1.69"));
+        Assert.DoesNotContain(r.Notes, n => n.Contains("lmnfig.ini IpAddress:"));
+
+        var r2 = Writer().ApplyNetwork(g.Root, "192.168.1.69", "192.168.1.245", "127.0.0.1:28080", true);
+        Assert.Contains(r2.Notes, n => n.Contains("lmnfig.ini IpAddress: 192.168.1.69 → 192.168.1.245"));
+        Assert.Contains(r2.Notes, n => n.Contains("SnowLauncher.ini LM_IpAddress: 192.168.1.69 → 192.168.1.245"));
+        Assert.Contains("IpAddress=192.168.1.245", g.Text("lmnfig.ini"));
+        Assert.Contains("LM_IpAddress=192.168.1.245", g.Text("SnowLauncher.ini"));
+        Assert.Contains("PCB_IpAddress=192.168.1.69", g.Text("SnowLauncher.ini"));
+        Assert.Contains("IpAddress=192.168.1.69", g.Text("config.ini"));
+    }
 }

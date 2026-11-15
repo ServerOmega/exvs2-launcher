@@ -67,8 +67,13 @@ public class IdentityTests
 
     [Theory]
     [InlineData("12345678901234567890", true)]
+    [InlineData("ABCDEF0123456789ABCD", true)]
+    [InlineData("abcdef0123456789abcd", true)]
     [InlineData("1234567890123456789", false)]
-    [InlineData("1234567890123456789a", false)]
+    [InlineData("1234567890123456789G", false)]
+    [InlineData("ABCDEF0123456789ABC", false)]
+    [InlineData("  ABCDEF0123456789ABCD  ", true)]
+    [InlineData("\"ABCDEF0123456789ABCD\"", true)]
     public void Access_code_format(string v, bool ok) => Assert.Equal(ok, IdentityFormat.IsValidAccessCode(v));
 
     [Theory]

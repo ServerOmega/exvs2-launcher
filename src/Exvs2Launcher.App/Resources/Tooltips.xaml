@@ -1,0 +1,56 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+  <!--
+    Beginner-friendly English tooltips for the launcher UI.
+    To translate later (Japanese, etc.), copy this file to Tooltips.ja.xaml, translate the string
+    values (keep the x:Key names), and swap the merged dictionary in App.xaml.
+  -->
+
+  <sys:String x:Key="Tip.Profile">A cab profile is one game folder (one cabinet). You can keep a separate profile for your Test folder, your main cab, or P2–P4.</sys:String>
+  <sys:String x:Key="Tip.ProfileNew">Create a new profile. It gets a random unique serial automatically. If you later pick a game folder that already has its own unique serial, that serial is kept and the folder is not changed.</sys:String>
+  <sys:String x:Key="Tip.ProfileDelete">Remove this profile from the list. The game folder and its files are not deleted.</sys:String>
+  <sys:String x:Key="Tip.ProfileSave">Save all profiles to the JSON file next to this launcher. Card values are never stored there.</sys:String>
+  <sys:String x:Key="Tip.ProfileStore">Where your profiles are saved on this PC.</sys:String>
+
+  <sys:String x:Key="Tip.StartAll">Start this cab in the right order: patched card server first (and wait until it is listening), then the Live Monitor if ticked, then the game. It never starts the pack's stock Server.exe.</sys:String>
+  <sys:String x:Key="Tip.Cancel">Stop a start that is still in progress. Programs that already started keep running; use a Stop button to close them.</sys:String>
+  <sys:String x:Key="Tip.CheckPort">Show what is listening on the card server port (usually 28080). Useful to see whether the patched server, the stock server, or something else is using it.</sys:String>
+  <sys:String x:Key="Tip.StopAll">Close the card server, Live Monitor, and game that belong to this profile. Other cab folders are left alone. Don't do this in the middle of a match on this card server.</sys:String>
+  <sys:String x:Key="Tip.StartCard">Start only the patched card server for this profile, and wait until its port is listening.</sys:String>
+  <sys:String x:Key="Tip.StopCard">Stop only this profile's card server. Tracked by the process this launcher started, or by the Server-Infinite.exe in this profile's card-server folder — never a server from another folder.</sys:String>
+  <sys:String x:Key="Tip.StartLm">Start only the Live Monitor (vsac29_Release_LM.exe) in this profile's game folder.</sys:String>
+  <sys:String x:Key="Tip.StopLm">Stop only the Live Monitor that belongs to this profile (this folder's vsac29_Release_LM.exe). Other cab LMs are left alone.</sys:String>
+  <sys:String x:Key="Tip.StartClient">Start only the game (vsac29_Release.exe) in this profile's game folder.</sys:String>
+  <sys:String x:Key="Tip.StopClient">Stop only the game that belongs to this profile (this folder's vsac29_Release.exe). Other cab folders are left alone.</sys:String>
+  <sys:String x:Key="Tip.ComponentStatus">Whether this part is running for the selected profile. "This folder" means a matching program was found in this profile's folder, even if this launcher didn't start it in this session.</sys:String>
+
+  <sys:String x:Key="Tip.Name">A name for this profile, for example "Test cab" or "P2". It is only for you; the game does not use it.</sys:String>
+  <sys:String x:Key="Tip.GameFolder">The cabinet folder that has vsac29_Release.exe, config.ini, lmnfig.ini, and card.ini. Pick the folder for this cab, not a different P2/P3/P4 or Test copy unless you mean to.</sys:String>
+  <sys:String x:Key="Tip.GameFolderBrowse">Browse to the game (cab) folder.</sys:String>
+  <sys:String x:Key="Tip.CardServerPath">The patched card server to start: 3-Start-Server.bat or Server-Infinite.exe from a current exvs2-matchmaking package (v0.4.0 or later). Never pick the pack's stock server\Server.exe.</sys:String>
+  <sys:String x:Key="Tip.CardServerBrowse">Browse to 3-Start-Server.bat or Server-Infinite.exe. The pack's Server.exe is refused.</sys:String>
+  <sys:String x:Key="Tip.ServerArgs">Extra arguments for the card server. Leave this empty unless a guide tells you otherwise.</sys:String>
+  <sys:String x:Key="Tip.StartCardCheck">When you click Start (all), also start the patched card server if its port is free. If the patched server is already running, it is reused.</sys:String>
+  <sys:String x:Key="Tip.StartLmCheck">When you click Start (all), also start the Live Monitor (vsac29_Release_LM.exe). Tick this if this cab should host the LM.</sys:String>
+  <sys:String x:Key="Tip.StartClientCheck">When you click Start (all), also start the game client (vsac29_Release.exe).</sys:String>
+  <sys:String x:Key="Tip.CardServerHost">Usually 127.0.0.1 — the game talks to the card server on this PC.</sys:String>
+  <sys:String x:Key="Tip.CardServerPort">The card server port. Typical value: 28080. The launcher waits until this port is listening before it starts the LM or the game.</sys:String>
+  <sys:String x:Key="Tip.PortTimeout">How many seconds to wait for the card server to open its port. Typical value: 90.</sys:String>
+  <sys:String x:Key="Tip.LmDelay">How many seconds to wait after starting the LM before starting the game. Typical value: 3. Increase this if the game starts too soon and cannot find the LM.</sys:String>
+
+  <sys:String x:Key="Tip.Serial">A unique 4-character cabinet ID written to config.ini (serial =). It must not match anyone else on the matchmaker, or you will be treated as the same cab. A new profile gets one automatically. "New serial" is the only way to replace a unique serial that is already in the folder.</sys:String>
+  <sys:String x:Key="Tip.NewSerial">Make a new random 4-character serial and write it to config.ini (a backup is made first). Only use this when you really want to change this cab's identity.</sys:String>
+  <sys:String x:Key="Tip.Card">The emulated Banapass card in card.ini: a 20-digit (or 20-hex) access code plus a 32-character uppercase hex chip ID. The values are never shown here. Do not share them. Each cab should have its own card.</sys:String>
+  <sys:String x:Key="Tip.NewCard">Create a brand-new card for this cab. The card server will see a new player on the next insert. The old card.ini is backed up first so you can go back. Never share the new values.</sys:String>
+  <sys:String x:Key="Tip.AccessPrefix">Optional digits placed at the start of a new access code, for example 99 for a second-player cab. Leave empty for a fully random code. This does not change an existing card until you click New card.</sys:String>
+  <sys:String x:Key="Tip.SyncSnow">Also update SnowLauncher.ini when this launcher changes the serial, card, or IPs, so opening SnowLauncher later does not put the old values back. Close SnowLauncher before writing.</sys:String>
+
+  <sys:String x:Key="Tip.AutoDetectIp">On every Start (all), fill the PCB (client) IP with this PC's LAN address. This never changes the LM IP — lmnfig.ini is the authority for the Live Monitor.</sys:String>
+  <sys:String x:Key="Tip.DetectNow">Fill the PCB (client) IP with this PC's current LAN address now. The LM IP is left as it is.</sys:String>
+  <sys:String x:Key="Tip.PcbIp">The address the game (the cab / PCB) uses, written to config.ini IpAddress. This is usually your PC's main LAN IP, for example 192.168.1.69. The game binds its ports on this address.</sys:String>
+  <sys:String x:Key="Tip.LmIp">The address the Live Monitor uses, written to lmnfig.ini IpAddress. For one cab this can be the same as the PCB IP. If you run more than one cab or LM on this PC, pick a separate address on the same adapter (a secondary IPv4, for example 192.168.1.245). If the LM is pinned to the same specific address the game uses, you can get error 21-01 (live monitor disconnect). The list includes every local IPv4 address, including secondary ones. Auto-detect will not overwrite this.</sys:String>
+  <sys:String x:Key="Tip.WriteIps">Write the PCB IP to config.ini and the LM IP to lmnfig.ini (and to SnowLauncher.ini if that option is on). The log shows a before-and-after diff. A backup is made if a file changes. Close SnowLauncher and the game first.</sys:String>
+  <sys:String x:Key="Tip.CurrentIps">The addresses currently stored in the game files. config.ini is the PCB (client). lmnfig.ini is the LM and is authoritative — auto-detect will not change it.</sys:String>
+  <sys:String x:Key="Tip.Log">A running log of what the launcher did. Card values and secrets are never written here. A copy is also saved as exvs2-launcher.log next to the exe.</sys:String>
+</ResourceDictionary>

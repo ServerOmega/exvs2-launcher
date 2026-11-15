@@ -50,8 +50,11 @@ public sealed class GameConfigWriter
     {
         var g = new GameFolder(gameFolder);
         IniDocument? cfg = TryLoad(g.ClientIni), lm = TryLoad(g.LmIni), card = TryLoad(g.CardIni), snow = TryLoad(g.SnowLauncherIni);
-        string? access = card?.Get("card", "accessCode");
-        string? chip = card?.Get("card", "chipId");
+        // Key names are matched case-insensitively (accessCode / AccessCode, chipId / ChipId).
+        string? access = IdentityFormat.NormalizeIniValue(card?.Get("card", "accessCode") ?? "");
+        string? chip = IdentityFormat.NormalizeIniValue(card?.Get("card", "chipId") ?? "");
+        if (access.Length == 0) access = null;
+        if (chip.Length == 0) chip = null;
         return new GameFolderState(
             cfg?.Get("config", "serial"),
             snow?.Get("Game_Config", "Serial"),
@@ -97,25 +100,47 @@ public sealed class GameConfigWriter
         var report = new WriteReport();
 
         if (File.Exists(g.ClientIni))
-            Edit(g.ClientIni, false, d => SetIf(d, "config", "IpAddress", pcbIp) | SetIf(d, "config", "Server", server), report);
+            Edit(g.ClientIni, false, d =>
+                SetLogged(d, "config", "IpAddress", pcbIp, "config.ini", report) |
+                SetLogged(d, "config", "Server", server, "config.ini", report), report);
         else
             report.Notes.Add("config.ini not found; client IP not written.");
 
         if (File.Exists(g.LmIni))
-            Edit(g.LmIni, false, d => SetIf(d, "config", "IpAddress", lmIp) | SetIf(d, "config", "Server", server), report);
+            Edit(g.LmIni, false, d =>
+                SetLogged(d, "config", "IpAddress", lmIp, "lmnfig.ini", report) |
+                SetLogged(d, "config", "Server", server, "lmnfig.ini", report), report);
         else
             report.Notes.Add("lmnfig.ini not found; LM IP not written.");
 
         if (syncSnowLauncher)
             EditIfExists(g.SnowLauncherIni, d =>
-                SetIf(d, "Game_Config", "PCB_IpAddress", pcbIp) |
-                SetIf(d, "Game_Config", "LM_IpAddress", lmIp) |
-                SetIf(d, "Game_Config", "Server", server), report);
+                SetLogged(d, "Game_Config", "PCB_IpAddress", pcbIp, "SnowLauncher.ini", report) |
+                SetLogged(d, "Game_Config", "LM_IpAddress", lmIp, "SnowLauncher.ini", report) |
+                SetLogged(d, "Game_Config", "Server", server, "SnowLauncher.ini", report), report);
         return report;
     }
 
-    private static bool SetIf(IniDocument d, string section, string key, string? value) =>
-        !string.IsNullOrWhiteSpace(value) && d.Set(section, key, value.Trim());
+    /// <summary>
+    /// Sets a value when it is provided, and records a before/after note (IPs and Server only; never card values).
+    /// A no-op set still logs "left as" for IpAddress / PCB_IpAddress / LM_IpAddress so the start log can
+    /// confirm lmnfig.ini was not silently overwritten.
+    /// </summary>
+    private static bool SetLogged(IniDocument d, string section, string key, string? value, string fileLabel, WriteReport report)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        value = value.Trim();
+        var old = d.Get(section, key);
+        bool changed = d.Set(section, key, value);
+        bool ipKey = key.Equals("IpAddress", StringComparison.OrdinalIgnoreCase)
+                     || key.Equals("PCB_IpAddress", StringComparison.OrdinalIgnoreCase)
+                     || key.Equals("LM_IpAddress", StringComparison.OrdinalIgnoreCase);
+        if (changed)
+            report.Notes.Add($"{fileLabel} {key}: {old ?? "(none)"} → {value}");
+        else if (ipKey)
+            report.Notes.Add($"{fileLabel} {key} left as {old ?? value}");
+        return changed;
+    }
 
     private void EditIfExists(string path, Func<IniDocument, bool> change, WriteReport report)
     {

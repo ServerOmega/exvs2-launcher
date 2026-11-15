@@ -36,6 +36,12 @@ public sealed class LauncherProfile
     /// <summary>The serial last written by the launcher (not secret; used to keep serials unique across cabs).</summary>
     public string? Serial { get; set; }
 
+    /// <summary>
+    /// Last observed game client window title (for example PCB_03). Informational only — the game sets this
+    /// itself, and the launcher cannot rename it. Shown next to the cab name so PCB_xx windows are easier to match.
+    /// </summary>
+    public string? LastGameWindowTitle { get; set; }
+
     public StartPlan ToStartPlan() => new()
     {
         GameFolder = GameFolder,

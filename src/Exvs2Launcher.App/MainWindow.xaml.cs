@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Exvs2Launcher.Core.Files;
 using Exvs2Launcher.Core.Identity;
+using Exvs2Launcher.Core.Input;
 using Exvs2Launcher.Core.Launch;
 using Exvs2Launcher.Core.Net;
 using Exvs2Launcher.Core.Profiles;
@@ -55,6 +56,7 @@ public partial class MainWindow : Window
         FillNics();
         Log("EXVS2 Launcher " + typeof(MainWindow).Assembly.GetName().Version + " ready. Card values are never shown or logged.");
         Loaded += MainWindow_Loaded;
+        MatchUrlBox.TextChanged += (_, _) => { if (!_loading) _matchUrlDirty = true; };
         _statusTimer.Tick += (_, _) => RefreshComponentStatus();
         _statusTimer.Start();
         RefreshComponentStatus();
@@ -93,8 +95,11 @@ public partial class MainWindow : Window
         PcbIpBox.Text = p.PcbIp ?? "";
         LmIpBox.Text = p.LmIp ?? "";
         _folderWhenShown = p.GameFolder;
+        _matchUrlDirty = false;
         _loading = false;
+        UpdateWindowTitle();
         RefreshGameState();
+        RefreshServerSettings();
     }
 
     private bool ReadForm()
@@ -150,6 +155,9 @@ public partial class MainWindow : Window
             SerialText.Text = "(pick a game folder)";
             CardText.Text = "";
             CurrentIpText.Text = "";
+            CabMappingText.Text = GameWindowTitle.Describe(null, _current?.LastGameWindowTitle);
+            ControllerSummaryText.Text = "";
+            GameServerText.Text = "";
             return;
         }
         try
@@ -190,9 +198,20 @@ public partial class MainWindow : Window
                 var dupes = SerialRegistry.Duplicates(_file, _current, s.Serial, _writer);
                 if (dupes.Count > 0) SerialText.Text += "   ⚠ also used by " + string.Join(", ", dupes);
             }
+            var folderLabel = GameWindowTitle.FolderLabel(folder);
+            CabMappingText.Text = GameWindowTitle.Describe(folderLabel, _current?.LastGameWindowTitle);
+            GameServerText.Text = $"config.ini Server={s.ClientServer ?? "-"}, lmnfig.ini Server={s.LmServer ?? "-"}, " +
+                                  SocketHookSetting.Display(s.LmDisableSocketHook);
+            try
+            {
+                var ctrl = new ControllerConfigWriter().Read(folder);
+                ControllerSummaryText.Text = "1: " + ctrl.Controller.Summary + "    2: " + ctrl.Controller1.Summary;
+            }
+            catch (Exception ex) { ControllerSummaryText.Text = "Could not read controller keys: " + ex.Message; }
         }
         catch (Exception ex) { SerialText.Text = "Could not read the game files: " + ex.Message; }
         RefreshServerVersion();
+        RefreshServerSettings();
         RefreshComponentStatus();
     }
 
@@ -252,6 +271,15 @@ public partial class MainWindow : Window
         SerialText.Text = "Click New to run the setup wizard and create a cab profile.";
         CardText.Text = "";
         CurrentIpText.Text = "";
+        CabMappingText.Text = "";
+        ControllerSummaryText.Text = "";
+        GameServerText.Text = "";
+        MatchUrlBox.Text = "";
+        TagSecretBox.Password = "";
+        TagSecretStatusText.Text = "";
+        ServerJsonPathText.Text = "";
+        WebUiUrlText.Text = "";
+        Title = "EXVS2 Launcher";
         _loading = false;
         RefreshComponentStatus();
     }
@@ -610,6 +638,18 @@ public partial class MainWindow : Window
         StartButton.IsEnabled = !_starting;
         StopAllButton.IsEnabled = !_starting && (card.Running || lm.Running || client.Running);
         CancelButton.IsEnabled = _starting;
+        if (client.Running && client.Pid is int pid)
+        {
+            var title = GameWindowTitle.TryRead(pid);
+            if (!string.IsNullOrWhiteSpace(title) && _current is not null &&
+                !string.Equals(_current.LastGameWindowTitle, title, StringComparison.Ordinal))
+            {
+                _current.LastGameWindowTitle = title;
+                var folderLabel = GameWindowTitle.FolderLabel(GameFolderBox.Text);
+                CabMappingText.Text = GameWindowTitle.Describe(folderLabel, title);
+                UpdateWindowTitle();
+            }
+        }
     }
 
     private void ApplyStatus(TextBlock label, Button start, Button stop, ComponentStatus status)
@@ -638,6 +678,127 @@ public partial class MainWindow : Window
     {
         _statusTimer.Stop();
         try { ReadForm(); _file.LastSelected = _current?.Name; _store.Save(_file); } catch { }
+    }
+
+    // ---------- identity / server / web UI ----------
+
+    private void NameBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        UpdateWindowTitle();
+    }
+
+    private void UpdateWindowTitle()
+    {
+        var name = (_current?.Name ?? NameBox.Text)?.Trim();
+        var window = _current?.LastGameWindowTitle;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            Title = "EXVS2 Launcher";
+            return;
+        }
+        Title = string.IsNullOrWhiteSpace(window)
+            ? "EXVS2 Launcher — " + name
+            : "EXVS2 Launcher — " + name + " (" + window + ")";
+    }
+
+    private void RefreshServerSettings()
+    {
+        if (_loading) return;
+        var host = HostBox.Text.Trim();
+        int.TryParse(PortBox.Text, out int port);
+        if (port <= 0) port = CardServerEndpoint.DefaultPort;
+        if (WebUiUrl.TryBuild(host, port, out var url, out var err))
+            WebUiUrlText.Text = "WebUI: " + url;
+        else
+            WebUiUrlText.Text = err ?? "";
+
+        var serverPath = ServerPathBox.Text.Trim();
+        var json = CardServerConfig.FindServerJson(string.IsNullOrWhiteSpace(serverPath) ? null : serverPath);
+        if (json is null)
+        {
+            ServerJsonPathText.Text = "No Configurations/server.json found next to the card server path.";
+            if (string.IsNullOrWhiteSpace(MatchUrlBox.Text)) MatchUrlBox.Text = "";
+            TagSecretStatusText.Text = "Tag secret is only stored in server.json and is never shown.";
+            return;
+        }
+        var pub = CardServerConfig.ReadPublic(json);
+        ServerJsonPathText.Text = "Card server config: " + json;
+        if (pub is not null)
+        {
+            if (MatchUrlBox.Text.Length == 0 || !_matchUrlDirty)
+                MatchUrlBox.Text = pub.MatchUrl ?? "";
+            TagSecretStatusText.Text = pub.HasTagSecret
+                ? "A tag secret is already set (hidden). Leave the box empty to keep it. It is never shown or logged."
+                : "No tag secret is set yet. Paste it here only when you want to write it. It is never shown or logged.";
+        }
+    }
+
+    private bool _matchUrlDirty;
+
+    private void Controllers_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current is null) { Warn("Create a cab profile first."); return; }
+        if (!ReadForm()) return;
+        var win = new ControllerWindow(_current, new ControllerConfigWriter(), Log, this);
+        win.ShowDialog();
+        RefreshGameState();
+    }
+
+    private void OpenWeb_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ReadForm() || _current is null) return;
+        if (!WebUiUrl.TryBuild(_current.CardServerHost, _current.CardServerPort, out var url, out var err) || url is null)
+        {
+            Warn(err ?? "Could not build the WebUI address.");
+            return;
+        }
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+            Log("Opened card server WebUI for \"" + _current.Name + "\": " + url);
+        }
+        catch (Exception ex)
+        {
+            Warn("Could not open " + url + ": " + ex.Message);
+        }
+    }
+
+    private void WriteServerJson_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ReadForm() || _current is null) return;
+        var json = CardServerConfig.FindServerJson(_current.CardServerPath);
+        if (json is null)
+        {
+            Warn("No Configurations/server.json was found next to the card server path. Browse to Server-Infinite.exe or 3-Start-Server.bat first.");
+            return;
+        }
+        var match = MatchUrlBox.Text.Trim();
+        var secret = TagSecretBox.Password;
+        if (string.IsNullOrWhiteSpace(match) && string.IsNullOrWhiteSpace(secret))
+        {
+            Warn("Enter a matchmaker address, or paste a tag secret, then try again. Leave the secret box empty to keep an existing secret.");
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(match) &&
+            !CardServerConfig.TryNormalizeMatchUrl(match, out _, out _, out var err))
+        {
+            Warn(err ?? "That matchmaker address is not valid.");
+            return;
+        }
+        try
+        {
+            var r = CardServerConfig.Apply(json, string.IsNullOrWhiteSpace(match) ? null : match,
+                string.IsNullOrWhiteSpace(secret) ? null : secret);
+            Report("Card server config written", r);
+            TagSecretBox.Password = "";
+            _matchUrlDirty = false;
+            RefreshServerSettings();
+        }
+        catch (Exception ex)
+        {
+            Warn("Could not write server.json: " + ex.Message);
+        }
     }
 
     // ---------- helpers ----------

@@ -25,7 +25,7 @@
   <sys:String x:Key="Tip.StopClient">Stop only the game that belongs to this profile (this folder's vsac29_Release.exe). Other cab folders are left alone.</sys:String>
   <sys:String x:Key="Tip.ComponentStatus">Whether this part is running for the selected profile. "This folder" means a matching program was found in this profile's folder, even if this launcher didn't start it in this session.</sys:String>
 
-  <sys:String x:Key="Tip.Name">A name for this profile, for example "Test cab" or "P2". It is only for you; the game does not use it.</sys:String>
+  <sys:String x:Key="Tip.Name">A name for this cabinet, for example "Cab 1" or "P2". It is stored in the launcher profile, shown in the window title and the log, and is only for you. The game does not use it and still names its own window (often PCB_xx).</sys:String>
   <sys:String x:Key="Tip.GameFolder">The cabinet folder that has vsac29_Release.exe, config.ini, lmnfig.ini, and card.ini. Pick the folder for this cab, not a different P2/P3/P4 or Test copy unless you mean to.</sys:String>
   <sys:String x:Key="Tip.GameFolderBrowse">Browse to the game (cab) folder.</sys:String>
   <sys:String x:Key="Tip.CardServerPath">The patched card server to start: 3-Start-Server.bat or Server-Infinite.exe from a current exvs2-matchmaking package (v0.4.0 or later). Never pick the pack's stock server\Server.exe.</sys:String>
@@ -68,4 +68,18 @@
   <sys:String x:Key="Tip.WizardRunChecks">Test the card server port, try to reach the matchmaker over HTTP, and list the exact programs to allow in TinyWall or Windows Firewall. The launcher never changes firewall rules. An already-running patched card server is left running; a test-started process is stopped afterwards.</sys:String>
 
   <sys:String x:Key="Tip.Log">A running log of what the launcher did. Card values and secrets are never written here. A copy is also saved as exvs2-launcher.log next to the exe.</sys:String>
+
+  <sys:String x:Key="Tip.CabMapping">The game folder name for this profile, plus the running game window title when the client is open (often PCB_03, PCB_14, and similar). The game sets that window name itself; this launcher cannot rename it. Use the cab name in the title bar to tell the windows apart.</sys:String>
+  <sys:String x:Key="Tip.OpenWeb">Open the patched card server's WebUI in your default browser. The address is http://{card server host}:{port}/ (the Blazor app at / and /Cards). If the card server binds 0.0.0.0, localhost is used instead. Start the card server first if the page does not load.</sys:String>
+  <sys:String x:Key="Tip.Controllers">Open the controller bindings editor. It reads and writes the game's existing config.ini keys ([controller], [controller-1], [xinput]): device name, numeric button ids, combo lists, and the XInput Mode / DeviceId fields. It can list connected XInput pads and DirectInput / WinMM sticks (including a Razer Panthera). This is not a new input driver.</sys:String>
+  <sys:String x:Key="Tip.GameServerIni">Server= in config.ini and lmnfig.ini is the address the game and LM use to reach this cab's card server (host:port). It must match the card server address above or the LM fails with error 21-32. DisableSocketHook on the LM must stay False when more than one cab or LM runs on this PC.</sys:String>
+  <sys:String x:Key="Tip.WriteServerJson">Write the matchmaker address (MatchUrl and StunHost) and, if you pasted one, the online tag secret to the card server's Configurations/server.json. A backup is made if the file changes. The tag secret is stored only in that file, is never shown in this window after you click Write, and is never logged. Leave the secret box empty to keep an existing secret.</sys:String>
+  <sys:String x:Key="Tip.ControllerReload">Reload the bindings from config.ini (and SnowLauncher.ini if present) and discard unsaved changes in this window.</sys:String>
+  <sys:String x:Key="Tip.ControllerWrite">Write the bindings to config.ini, and to SnowLauncher.ini if that option is on for this profile. A backup is made if a file changes. Close SnowLauncher and the game first. Unknown keys such as arcade bitmasks are left alone.</sys:String>
+  <sys:String x:Key="Tip.ControllerClose">Close this window. Unsaved changes are discarded.</sys:String>
+  <sys:String x:Key="Tip.ControllerDetected">Controllers currently visible through XInput (slots 0–3) or the WinMM joystick API (DirectInput-style devices, including many fight sticks). Select one, then click Use this device on a slot, or Bind next to a button and press the stick.</sys:String>
+  <sys:String x:Key="Tip.ControllerRefresh">Scan again for connected pads and fight sticks. Plug the device in first.</sys:String>
+  <sys:String x:Key="Tip.XInputEnabled">config.ini [xinput] EmulatedXInputEnabled. Leave this on unless a guide tells you otherwise.</sys:String>
+  <sys:String x:Key="Tip.XInputMode">Optional [xinput] Mode, for example xinput-native. Leave empty if you are not using that path. This is not the same as the Mode key on a [controller] slot.</sys:String>
+  <sys:String x:Key="Tip.ControllerDeviceId">0–15 selects one pad or stick; 16 means all devices. On [controller] this is the hook's DeviceId field.</sys:String>
 </ResourceDictionary>

@@ -14,12 +14,15 @@ This repo is a from-scratch replacement for the *launcher / orchestrator* layer:
 
 ## Status
 
-Private preview, **v0.2.2 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+Private preview, **v0.3.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
 
 - **Correct start order.** Starts the patched card server you pick (`Server-Infinite.exe` or `3-Start-Server.bat`),
   waits until `127.0.0.1:28080` accepts connections, then starts the LM (`vsac29_Release_LM.exe`, optional) and the
   client (`vsac29_Release.exe`). It never starts the pack's stock `server\Server.exe`. If the port is already held it
   says by which program: the patched server is reused, the stock server or anything else is refused.
+- **Cab name in the title and log.** Each profile has a cab name (for example "Cab 1") stored in the launcher profile. It appears in the window title and in start/stop log lines, so you do not have to tell the game's own `PCB_xx` window titles apart unaided. The identity section also shows the game-folder name and, once the client is running, the current game window title. The launcher cannot rename the game window.
+- **Controller mapper.** A bindings window reads and writes the observed `config.ini` keys (`[controller]`, `[controller-1]`, `[xinput]`): device name, numeric button ids, combo lists (AB/BC/AC/ABC expanded into the `A`/`B`/`C` lists the hook reads), and the `Mode` / `DeviceId` fields (`0–15`, or `16` = all devices). Connected pads and fight sticks are listed through XInput and the WinMM joystick API (a Razer Panthera in PS4 mode usually appears as DirectInput / WinMM). Bind captures a button press. This is not a new input driver. Unknown keys such as arcade bitmasks are left alone. Files are backed up before they change, and SnowLauncher.ini is updated when that option is on.
+- **Server settings and Open web page.** The card-server host/port, `Server=` in `config.ini` / `lmnfig.ini`, LM `DisableSocketHook`, and the card server's `Configurations/server.json` MatchUrl live in one section. The online tag secret can be written there but is never shown or logged (leave the box empty to keep an existing secret). **Open web page** launches the card server WebUI (`http://{host}:{port}/`, or localhost when the server binds `0.0.0.0`) in the default browser.
 - **Unique serial and new card.** A new profile (and the first-run wizard) gets a random unique 4-character serial
   automatically, so you don't have to click a button. If the game folder already has a unique serial in `config.ini`,
   the profile adopts it and the folder is not changed. A new serial is written only when the folder has no serial, or

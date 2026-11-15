@@ -1,4 +1,4 @@
-# Testing the v0.2.2 launcher
+# Testing the v0.3.0 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -100,12 +100,36 @@ dropdowns only list real adapter addresses.
 Please report: anything in the log that looks wrong, whether the game boots and reaches the card screen, whether
 LM/client need a longer "LM → client delay", and whether the PCB and LM IPs it used are the ones you expected.
 
-## Known gaps in v0.2.2
+## 6. Cab identity, controllers, server settings, and the web page
+
+1. Set the cab name (for example "Cab 1") and Save. The window title should become `EXVS2 Launcher — Cab 1`. Start
+   all / Stop lines in the log should use that name. The identity section should show the game folder name
+   (for example `EXVS2IB_V29`). After the client is running, it should also show the current game window title
+   (often `PCB_03` or similar). The launcher cannot rename that window.
+2. Click **Controllers...**. The window should list the device name and button ids already in `config.ini`
+   (`[controller]`, `[controller-1]`, `[xinput]`). If a Razer Panthera (or another stick) is plugged in, **Refresh**
+   should list it (XInput or DirectInput / WinMM). **Use this device** copies the name; **Bind** next to a button
+   waits for a press and fills the 1-based button id. **Write bindings** backs up `config.ini` (and SnowLauncher.ini
+   if that option is on) and writes only the known keys — arcade bitmasks and comments stay as they were. Close
+   SnowLauncher and the game first.
+3. Under **Server settings**, the card server host/port should match this cab. `Server=` from `config.ini` and
+   `lmnfig.ini` is shown, along with `DisableSocketHook`. If a `Configurations/server.json` sits next to the card
+   server, MatchUrl is shown. The tag secret box stays empty; the note should say whether a secret is already set,
+   never the value. **Write server.json** updates MatchUrl (and StunHost) and, if you pasted a secret, the secret —
+   the log must not print the secret. Leave the box empty to keep an existing secret.
+4. With the card server running, click **Open web page**. The default browser should open `http://127.0.0.1:28080/`
+   (or this cab's host/port). That is the card server WebUI (`/` or `/Cards`).
+
+## Known gaps in v0.3.0
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.
 - The launcher cannot add a second LAN IP for you; the wizard shows the PowerShell command, but you still have to
   run it in an elevated window.
-- No battleMode editor, input bindings, or resolution helpers yet.
+- No battleMode editor or resolution helpers yet. `29\testmode_pcb.json` is an svd1-wrapped test-mode store (not
+  plain JSON). Besides `battleMode` it also holds `cpuMode`, `lanBattleTimeLimit`, coin costs, close times, and
+  many other operator settings. A battleMode editor is still optional and not in this build.
+- Controller detection uses XInput and WinMM only. A stick that appears only as a raw HID device may need its
+  name and button ids typed by hand.
 - If "Server" is the card server's process name, the launcher treats it as the stock server.
 - The launcher log is plain text next to the exe; it never contains card values or secrets.

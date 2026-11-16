@@ -114,3 +114,6 @@ Desktop.ini
 # Launcher local state (written next to the exe)
 exvs2-launcher.profiles.json
 exvs2-launcher.profiles.json.tmp
+exvs2-launcher.n2n-keys.dat
+exvs2-launcher.n2n-keys.dat.tmp
+edge.conf

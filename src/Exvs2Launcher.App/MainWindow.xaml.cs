@@ -9,6 +9,7 @@ using Exvs2Launcher.Core.Input;
 using Exvs2Launcher.Core.Launch;
 using Exvs2Launcher.Core.Net;
 using Exvs2Launcher.Core.Profiles;
+using Exvs2Launcher.Core.VirtualLan;
 using Exvs2Launcher.Core.Wizard;
 using Microsoft.Win32;
 
@@ -35,6 +36,11 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _startCts;
     private CancellationTokenSource? _serverCheckCts;
     private readonly DispatcherTimer _statusTimer = new() { Interval = TimeSpan.FromSeconds(1) };
+    private readonly DispatcherTimer _vlanTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private readonly VirtualLanController _vlan;
+    private readonly VirtualLanKeyStore _vlanKeys;
+    private bool _vlanRefreshing;
+    private bool _closeAfterVlanStop;
 
     public MainWindow()
     {
@@ -44,7 +50,12 @@ public partial class MainWindow : Window
         var seq = new StartSequencer(_starter, _probe, _owners, new RealDelay());
         seq.Log += Log;
         seq.StageChanged += s => Dispatcher.Invoke(() => StageText.Text = s.ToString());
-        _launcher = new CabLauncher(seq, _writer);
+        var vlanDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "exvs2-launcher", "n2n");
+        _vlan = new VirtualLanController(new ElevatedEdgeHost(), new SystemAdapterSource(), new UdpEdgeManagement(), new RealDelay(), vlanDir);
+        _vlan.Log += Log;
+        _vlan.StateChanged += _ => Dispatcher.BeginInvoke(RefreshVlanStatus);
+        _vlanKeys = new VirtualLanKeyStore(Path.Combine(Path.GetDirectoryName(_store.FilePath)!, VirtualLanKeyStore.FileName), Dpapi.Protect, Dpapi.Unprotect);
+        _launcher = new CabLauncher(seq, _writer, virtualLan: _vlan, virtualLanKey: p => SafeKey(p.Name));
         _launcher.Log += Log;
 
         StoreText.Text = "Profiles: " + _store.FilePath;
@@ -60,7 +71,10 @@ public partial class MainWindow : Window
         MatchUrlBox.TextChanged += (_, _) => { if (!_loading) _matchUrlDirty = true; };
         _statusTimer.Tick += (_, _) => RefreshComponentStatus();
         _statusTimer.Start();
+        _vlanTimer.Tick += async (_, _) => await RefreshVlanAsync();
+        _vlanTimer.Start();
         RefreshComponentStatus();
+        RefreshVlanStatus();
     }
 
     // ---------- profile <-> form ----------
@@ -95,6 +109,7 @@ public partial class MainWindow : Window
         AutoIpCheck.IsChecked = p.AutoDetectIp;
         PcbIpBox.Text = p.PcbIp ?? "";
         LmIpBox.Text = p.LmIp ?? "";
+        ShowVirtualLan(p);
         _folderWhenShown = p.GameFolder;
         _matchUrlDirty = false;
         _loading = false;
@@ -111,6 +126,9 @@ public partial class MainWindow : Window
         if (!int.TryParse(DelayBox.Text, out int delay) || delay < 0) { Warn("LM → client delay must be 0 or more."); return false; }
         var prefix = PrefixBox.Text.Trim();
         if (prefix.Length > 18 || prefix.Any(c => c is < '0' or > '9')) { Warn("Access code prefix must be digits only (0-18 of them)."); return false; }
+        if (!int.TryParse(VlanMtuBox.Text, out int mtu)) { Warn("Virtual LAN MTU must be a number (default 1290)."); return false; }
+        if (!int.TryParse(VlanMetricBox.Text, out int metric)) { Warn("Virtual LAN metric must be a number (default 1)."); return false; }
+        var oldName = _current.Name;
 
         _current.Name = string.IsNullOrWhiteSpace(NameBox.Text) ? "Cab" : NameBox.Text.Trim();
         _current.GameFolder = GameFolderBox.Text.Trim();
@@ -128,6 +146,7 @@ public partial class MainWindow : Window
         _current.AutoDetectIp = AutoIpCheck.IsChecked == true;
         _current.PcbIp = NullIfBlank(IpFrom(PcbIpBox.Text));
         _current.LmIp = NullIfBlank(IpFrom(LmIpBox.Text));
+        ReadVirtualLan(_current, oldName, mtu, metric);
         return true;
     }
 
@@ -583,7 +602,7 @@ public partial class MainWindow : Window
         RefreshComponentStatus();
     }
 
-    private void StopAll_Click(object sender, RoutedEventArgs e)
+    private async void StopAll_Click(object sender, RoutedEventArgs e)
     {
         if (_current is null) return;
         if (MessageBox.Show(this, "Close this profile's Live Monitor, game, AND card server?\n\nOther cab folders are left alone. Don't do this while someone is mid-match on this card server.",
@@ -595,6 +614,8 @@ public partial class MainWindow : Window
             n += _launcher.Sequencer.StopRole(role, plan);
         Log(n == 0 ? "Nothing to stop for this profile." : $"Stopped {n} program(s) for this profile.");
         RefreshComponentStatus();
+        if (_vlan.StartedByLauncher) await _vlan.StopAsync();
+        RefreshVlanStatus();
     }
 
     private StartPlan? StatusPlan()
@@ -678,10 +699,189 @@ public partial class MainWindow : Window
         SetStage(kind is PortOwnerKind.None or PortOwnerKind.PatchedServer ? msg : "Check port: " + msg);
     }
 
-    private void Window_Closing(object? sender, CancelEventArgs e)
+    private async void Window_Closing(object? sender, CancelEventArgs e)
     {
+        if (_vlan.StartedByLauncher && !_closeAfterVlanStop)
+        {
+            var plan = StatusPlan();
+            bool gameUp = plan is not null && (_launcher.Sequencer.RoleStatus(ComponentRoles.Lm, plan).Running ||
+                                               _launcher.Sequencer.RoleStatus(ComponentRoles.Client, plan).Running);
+            if (gameUp && MessageBox.Show(this,
+                    "Closing the launcher also disconnects the n2n virtual LAN, and the LM and game on this cab lose it. Close anyway?",
+                    "Virtual LAN", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                e.Cancel = true;
+                return;
+            }
+            e.Cancel = true;
+            _closeAfterVlanStop = true;
+            try { await _vlan.StopAsync(); } catch (Exception) { }
+            Close();
+            return;
+        }
         _statusTimer.Stop();
+        _vlanTimer.Stop();
         try { ReadForm(); _file.LastSelected = _current?.Name; _store.Save(_file); } catch { }
+    }
+
+    // ---------- virtual LAN (n2n) ----------
+
+    private string? SafeKey(string profileName)
+    {
+        try { return _vlanKeys.Get(profileName); }
+        catch (Exception) { return null; }
+    }
+
+    private string KeyStatus(string profileName) =>
+        SafeKey(profileName) is { Length: > 0 } k
+            ? "A key is saved for this profile " + Secrets.Mask(k) + ". Type a new one only to replace it."
+            : "No key saved. It is stored only for this Windows user (DPAPI), never in the profiles file or the log.";
+
+    private void ShowVirtualLan(LauncherProfile p)
+    {
+        var v = p.VirtualLan ??= new VirtualLanSettings();
+        try { v.Community = _vlanKeys.GetCommunity(p.Name) ?? v.Community; } catch (Exception) { }
+        VlanEnableCheck.IsChecked = v.Enabled;
+        VlanEdgeBox.Text = v.EdgePath;
+        VlanSupernodeBox.Text = v.Supernode;
+        VlanCommunityBox.Password = v.Community;
+        VlanKeyBox.Password = "";
+        VlanIpModeBox.SelectedIndex = (int)v.IpMode;
+        VlanStaticIpBox.Text = v.StaticIp;
+        VlanMtuBox.Text = v.Mtu.ToString();
+        VlanMetricBox.Text = v.Metric.ToString();
+        VlanAdapterBox.Text = v.AdapterName;
+        VlanDescriptionBox.Text = v.Description;
+        VlanMulticastCheck.IsChecked = v.Multicast;
+        VlanRelayCheck.IsChecked = v.ForceRelay;
+        VlanHeaderCheck.IsChecked = v.HeaderEncryption;
+        VlanKeyStatusText.Text = KeyStatus(p.Name);
+        VlanGrid.IsEnabled = v.Enabled;
+        RefreshTapHint();
+        RefreshVlanStatus();
+    }
+
+    private void ReadVirtualLan(LauncherProfile p, string oldName, int mtu, int metric)
+    {
+        var v = p.VirtualLan ??= new VirtualLanSettings();
+        try { _vlanKeys.Rename(oldName, p.Name); } catch (Exception ex) { Log("Could not move the saved n2n key to the new profile name: " + ex.Message); }
+        v.Enabled = VlanEnableCheck.IsChecked == true;
+        v.EdgePath = VlanEdgeBox.Text.Trim().Trim('"');
+        v.Supernode = VlanSupernodeBox.Text.Trim();
+        v.Community = VlanCommunityBox.Password.Trim();
+        v.IpMode = VlanIpModeBox.SelectedIndex is >= 0 and <= 2 ? (VirtualIpMode)VlanIpModeBox.SelectedIndex : VirtualIpMode.Static;
+        v.StaticIp = VlanStaticIpBox.Text.Trim();
+        v.Mtu = mtu;
+        v.Metric = metric;
+        v.AdapterName = VlanAdapterBox.Text.Trim();
+        v.Description = VlanDescriptionBox.Text.Trim();
+        v.Multicast = VlanMulticastCheck.IsChecked == true;
+        v.ForceRelay = VlanRelayCheck.IsChecked == true;
+        v.HeaderEncryption = VlanHeaderCheck.IsChecked == true;
+        try
+        {
+            _vlanKeys.SetCommunity(p.Name, string.IsNullOrEmpty(v.Community) ? null : v.Community);
+            if (VlanKeyBox.Password.Length > 0)
+            {
+                _vlanKeys.Set(p.Name, VlanKeyBox.Password);
+                VlanKeyBox.Password = "";
+                Log("Saved the n2n key for \"" + p.Name + "\" (hidden).");
+            }
+        }
+        catch (Exception ex) { Warn("Could not save the n2n key or community: " + ex.Message); }
+        VlanKeyStatusText.Text = KeyStatus(p.Name);
+    }
+
+    private void VlanEnable_Changed(object sender, RoutedEventArgs e)
+    {
+        VlanGrid.IsEnabled = VlanEnableCheck.IsChecked == true;
+        if (!_loading && VlanEnableCheck.IsChecked == true)
+            Log("Virtual LAN mode on for this profile. Start all will start edge.exe first (administrator prompt), then write the TAP IP. Click Save to keep it.");
+    }
+
+    private void VlanBrowseEdge_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog { Filter = "n2n edge (edge.exe)|edge.exe|Programs (*.exe)|*.exe", Title = "Pick your n2n edge.exe" };
+        if (dlg.ShowDialog(this) == true) VlanEdgeBox.Text = dlg.FileName;
+    }
+
+    private void VlanForgetKey_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current is null) return;
+        try { _vlanKeys.Set(_current.Name, null); VlanKeyBox.Password = ""; Log("Deleted the saved n2n key for \"" + _current.Name + "\"."); }
+        catch (Exception ex) { Warn("Could not delete the key: " + ex.Message); }
+        VlanKeyStatusText.Text = KeyStatus(_current.Name);
+    }
+
+    private async void VlanConnect_Click(object sender, RoutedEventArgs e)
+    {
+        if (!SaveAll(quiet: true) || _current is null) return;
+        VlanConnectButton.IsEnabled = false;
+        try
+        {
+            var r = await _vlan.StartAsync(_current.VirtualLan, SafeKey(_current.Name));
+            if (!r.Succeeded) SetStage("Virtual LAN: " + r.Message);
+        }
+        catch (Exception ex) { Warn("Virtual LAN: " + ex.Message); }
+        finally { RefreshVlanStatus(); }
+    }
+
+    private async void VlanDisconnect_Click(object sender, RoutedEventArgs e)
+    {
+        var plan = StatusPlan();
+        bool gameUp = plan is not null && (_launcher.Sequencer.RoleStatus(ComponentRoles.Lm, plan).Running ||
+                                           _launcher.Sequencer.RoleStatus(ComponentRoles.Client, plan).Running);
+        if (gameUp && MessageBox.Show(this, "The LM or game is still running and will lose the virtual LAN. Disconnect anyway?",
+                "Virtual LAN", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+        VlanDisconnectButton.IsEnabled = false;
+        try { await _vlan.StopAsync(); }
+        catch (Exception ex) { Warn("Virtual LAN: " + ex.Message); }
+        finally { RefreshVlanStatus(); }
+    }
+
+    private async Task RefreshVlanAsync()
+    {
+        if (_vlanRefreshing || _vlan.State != VirtualLanState.Up) return;
+        _vlanRefreshing = true;
+        try { await _vlan.RefreshAsync(); }
+        catch (Exception) { }
+        finally { _vlanRefreshing = false; RefreshVlanStatus(); }
+    }
+
+    private void RefreshVlanStatus()
+    {
+        if (!Dispatcher.CheckAccess()) { Dispatcher.BeginInvoke(RefreshVlanStatus); return; }
+        var st = _vlan.Status;
+        VlanStatusText.Text = st.Describe();
+        VlanStatusText.Foreground = st.State switch
+        {
+            VirtualLanState.Up => System.Windows.Media.Brushes.DarkGreen,
+            VirtualLanState.Failed => System.Windows.Media.Brushes.Firebrick,
+            _ => System.Windows.Media.Brushes.Gray,
+        };
+        bool busy = st.State is VirtualLanState.Starting or VirtualLanState.WaitingForAdapter or VirtualLanState.Stopping;
+        VlanConnectButton.IsEnabled = !busy && st.State != VirtualLanState.Up;
+        VlanDisconnectButton.IsEnabled = !busy && st.State == VirtualLanState.Up;
+    }
+
+    private void RefreshTapHint()
+    {
+        try
+        {
+            var taps = TapAdapters.FindTaps(new SystemAdapterSource().List());
+            VlanTapRun.Text = taps.Count > 0
+                ? "TAP-Windows adapter found: " + string.Join(", ", taps.Select(t => t.Name)) + ". Driver downloads, if you ever need them: "
+                : "No TAP-Windows adapter found. Virtual LAN needs the OpenVPN TAP driver: run " + TapAdapters.RecommendedInstaller +
+                  " once, as administrator. Get it from the ";
+        }
+        catch (Exception) { VlanTapRun.Text = "TAP-Windows driver: "; }
+    }
+
+    private void Link_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true }); }
+        catch (Exception ex) { Warn("Could not open the link: " + ex.Message); }
+        e.Handled = true;
     }
 
     // ---------- identity / server / web UI ----------

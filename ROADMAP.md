@@ -61,6 +61,7 @@ This is the first build that can replace SnowLauncher for local + VPS matchmakin
 ## Milestone 5 — Later / optional
 
 - Virtual LAN helpers (detect Radmin / TAP / n2n, do not vendor those tools)
+  - [~] n2n virtual LAN mode A MVP on branch `n2n-vlan` (user-supplied edge.exe, TAP detection, elevated edge, TAP IP written; see docs/VIRTUAL-LAN.md). Needs a real two-cab test.
 - Optional handoff to a user-provided mod manager
 - Friend-request / online-tag status once exvs2-matchmaking exposes it
 - Installer / auto-update

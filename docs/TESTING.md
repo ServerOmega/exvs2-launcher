@@ -171,3 +171,30 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
   strings are. `OpeningScreenSkip` is synced to SnowLauncher only for the observed `SkipAll` = `3` pairing.
 - If "Server" is the card server's process name, the launcher treats it as the stock server.
 - The launcher log is plain text next to the exe; it never contains card values or secrets.
+
+## 8. Virtual LAN (n2n) — `n2n-vlan` test build only
+
+Details: [VIRTUAL-LAN.md](VIRTUAL-LAN.md). Use a private community and a test supernode. Do this on the Test folder,
+not a cab someone is playing on.
+
+1. **Off by default.** Open an existing profile: the Virtual LAN box is unticked and its fields are greyed out.
+   Start all behaves exactly as before (LAN IP, no administrator prompt, no edge.exe).
+2. **TAP hint.** Without the TAP driver the section says no TAP-Windows adapter was found and links the official
+   OpenVPN downloads page. After installing `tap-windows-9.24.7-I601-Win10.exe` (as admin) and reopening the
+   launcher it names the adapter (for example `Ethernet 3`).
+3. **Settings and secrets.** Tick the box, pick edge.exe, enter supernode `host:port`, community, key, a static IP such
+   as `10.77.0.11/24`, Save. Check `exvs2-launcher.profiles.json`: no key and no community in it. The key box empties
+   and says a key is saved. Reopen the launcher: the key is still saved, never shown.
+4. **Connect.** Click Connect: one Windows administrator prompt. Clicking No → a clear "administrator" error. Yes →
+   the log shows `"edge.exe" "...\edge.conf"` and options with `-c (hidden) -k (hidden)`, then
+   "Virtual LAN up: 10.77.0.11 on <TAP>". `%LocalAppData%\exvs2-launcher\n2n\edge.conf` is gone afterwards.
+   The status line shows the IP and peers.
+5. **Start all.** config.ini and lmnfig.ini `IpAddress` become the TAP IP, `Server=127.0.0.1:28080` is unchanged,
+   then card server → LM → client start. With a second PC on the same community, its LM/client should see this
+   LM. With TinyWall on, the first try may fail until edge.exe and the game's UDP 49000 / 48000–48020 are allowed.
+6. **Errors.** Wrong supernode or blocked edge → after 30 s "did not get a virtual IP", edge stopped, nothing started.
+   Wrong edge path → refused before any prompt.
+7. **Stop.** Stop all closes client, LM, card server, then "Stopped n2n edge ... cleanly". Disconnect does the same
+   for edge alone (asks first if the game is running). Closing the launcher stops an edge it started.
+8. **Back to normal.** Untick Virtual LAN, Save, Start all: config.ini / lmnfig.ini go back to the LAN IPs and the
+   log says the old virtual LAN address was replaced.

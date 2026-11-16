@@ -309,6 +309,82 @@
                        ToolTip="{StaticResource Tip.CurrentIps}" />
           </Grid>
         </GroupBox>
+
+        <GroupBox Header="Virtual LAN (n2n) - optional, off by default" x:Name="VlanBox">
+          <StackPanel>
+            <CheckBox x:Name="VlanEnableCheck" Margin="0,2,0,4" ToolTip="{StaticResource Tip.VlanEnable}"
+                      Checked="VlanEnable_Changed" Unchecked="VlanEnable_Changed">
+              <TextBlock TextWrapping="Wrap"
+                         Text="Use an n2n virtual LAN for this cab (classic LM-over-VPN play with a private group; not the public matchmaker queue)" />
+            </CheckBox>
+            <Grid x:Name="VlanGrid">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="140" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+              </Grid.RowDefinitions>
+
+              <Label Grid.Row="0" Content="edge.exe" ToolTip="{StaticResource Tip.VlanEdge}" />
+              <TextBox Grid.Row="0" Grid.Column="1" x:Name="VlanEdgeBox" ToolTip="{StaticResource Tip.VlanEdge}" Margin="0,2,6,2" />
+              <Button Grid.Row="0" Grid.Column="2" Content="Browse..." Click="VlanBrowseEdge_Click" ToolTip="{StaticResource Tip.VlanEdge}" />
+
+              <Label Grid.Row="1" Content="Supernode" ToolTip="{StaticResource Tip.VlanSupernode}" />
+              <TextBox Grid.Row="1" Grid.Column="1" x:Name="VlanSupernodeBox" ToolTip="{StaticResource Tip.VlanSupernode}" Margin="0,2,6,2" />
+
+              <Label Grid.Row="2" Content="Community" ToolTip="{StaticResource Tip.VlanCommunity}" />
+              <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="VlanCommunityBox" ToolTip="{StaticResource Tip.VlanCommunity}" Margin="0,2,6,2" />
+
+              <Label Grid.Row="3" Content="Key" ToolTip="{StaticResource Tip.VlanKey}" />
+              <StackPanel Grid.Row="3" Grid.Column="1">
+                <PasswordBox x:Name="VlanKeyBox" ToolTip="{StaticResource Tip.VlanKey}" Margin="0,2,6,2" />
+                <TextBlock x:Name="VlanKeyStatusText" Foreground="Gray" FontSize="11" TextWrapping="Wrap" />
+              </StackPanel>
+              <Button Grid.Row="3" Grid.Column="2" Content="Forget key" Click="VlanForgetKey_Click" ToolTip="{StaticResource Tip.VlanForgetKey}" />
+
+              <Label Grid.Row="4" Content="Virtual IP" ToolTip="{StaticResource Tip.VlanIp}" />
+              <WrapPanel Grid.Row="4" Grid.Column="1">
+                <ComboBox x:Name="VlanIpModeBox" Width="190" Margin="0,2,6,2" ToolTip="{StaticResource Tip.VlanIp}">
+                  <ComboBoxItem Content="Static (fixed address)" />
+                  <ComboBoxItem Content="Assigned by supernode" />
+                  <ComboBoxItem Content="DHCP from a peer" />
+                </ComboBox>
+                <TextBox x:Name="VlanStaticIpBox" Width="150" Margin="0,2,6,2" ToolTip="{StaticResource Tip.VlanIp}" />
+              </WrapPanel>
+
+              <Label Grid.Row="5" Content="Advanced" ToolTip="{StaticResource Tip.VlanAdvanced}" />
+              <WrapPanel Grid.Row="5" Grid.Column="1">
+                <Label Content="MTU" ToolTip="{StaticResource Tip.VlanAdvanced}" />
+                <TextBox x:Name="VlanMtuBox" Width="50" ToolTip="{StaticResource Tip.VlanAdvanced}" />
+                <Label Content="metric" Margin="6,0,0,0" ToolTip="{StaticResource Tip.VlanMetric}" />
+                <TextBox x:Name="VlanMetricBox" Width="40" ToolTip="{StaticResource Tip.VlanMetric}" />
+                <Label Content="TAP name" Margin="6,0,0,0" ToolTip="{StaticResource Tip.VlanAdapter}" />
+                <TextBox x:Name="VlanAdapterBox" Width="110" ToolTip="{StaticResource Tip.VlanAdapter}" />
+                <Label Content="description" Margin="6,0,0,0" ToolTip="{StaticResource Tip.VlanDescription}" />
+                <TextBox x:Name="VlanDescriptionBox" Width="100" ToolTip="{StaticResource Tip.VlanDescription}" />
+              </WrapPanel>
+
+              <WrapPanel Grid.Row="6" Grid.Column="1" Margin="0,2,0,2">
+                <CheckBox x:Name="VlanMulticastCheck" Content="Multicast (-E)" Margin="0,0,12,0" ToolTip="{StaticResource Tip.VlanMulticast}" />
+                <CheckBox x:Name="VlanRelayCheck" Content="Always relay through supernode (-S1)" Margin="0,0,12,0" ToolTip="{StaticResource Tip.VlanRelay}" />
+                <CheckBox x:Name="VlanHeaderCheck" Content="Header encryption (-H)" ToolTip="{StaticResource Tip.VlanHeader}" />
+              </WrapPanel>
+
+              <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" x:Name="VlanStatusText" TextWrapping="Wrap"
+                         Margin="0,4,0,0" ToolTip="{StaticResource Tip.VlanStatus}" />
+              <WrapPanel Grid.Row="7" Grid.Column="2">
+                <Button x:Name="VlanConnectButton" Content="Connect" Click="VlanConnect_Click" ToolTip="{StaticResource Tip.VlanConnect}" />
+                <Button x:Name="VlanDisconnectButton" Content="Disconnect" Click="VlanDisconnect_Click" ToolTip="{StaticResource Tip.VlanDisconnect}" />
+              </WrapPanel>
+            </Grid>
+            <TextBlock x:Name="VlanTapText" TextWrapping="Wrap" Margin="0,4,0,0">
+              <Run x:Name="VlanTapRun" />
+              <Hyperlink x:Name="VlanTapLink" NavigateUri="https://build.openvpn.net/downloads/releases/" RequestNavigate="Link_RequestNavigate">official OpenVPN tap-windows downloads</Hyperlink>
+            </TextBlock>
+          </StackPanel>
+        </GroupBox>
       </StackPanel>
     </ScrollViewer>
 

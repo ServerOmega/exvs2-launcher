@@ -78,6 +78,13 @@ Private preview, **v0.4.4 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
   already in `lmnfig.ini` is not kept as authoritative.
 - **One profile per game folder**, saved as `exvs2-launcher.profiles.json` next to the exe (no card values in it).
 - Refuses to write files or start while SnowLauncher or the game is running.
+- **Optional n2n virtual LAN (off by default).** For classic LM-over-VPN play with a private group: point the
+  launcher at your own `edge.exe`, supernode, community and key, and Start brings up edge (one administrator
+  prompt), waits for the TAP adapter's IP, writes it into `config.ini` / `lmnfig.ini`, and keeps the card server on
+  `127.0.0.1:28080`. Stop all / Disconnect / closing the launcher stop edge cleanly. The key is masked, stored per
+  Windows user with DPAPI (never in the profiles file), and never logged or put on a command line. Needs the
+  official OpenVPN TAP-Windows driver (not bundled). This does not join the public matchmaker queue. Setup,
+  TinyWall rules and limits: [docs/VIRTUAL-LAN.md](docs/VIRTUAL-LAN.md).
 
 How to test it: [docs/TESTING.md](docs/TESTING.md). Build: see below.
 
@@ -99,6 +106,8 @@ Docs and the architecture are in:
 - [docs/SNOWLAUNCHER-NOTES.md](docs/SNOWLAUNCHER-NOTES.md) — observed SnowLauncher behavior (clean-room notes, no source copied)
 - [docs/DESIGN.md](docs/DESIGN.md) — proposed architecture, stack options, and feature list
 - [ROADMAP.md](ROADMAP.md) — MVP milestones
+- [docs/VIRTUAL-LAN.md](docs/VIRTUAL-LAN.md) — optional n2n virtual LAN mode: requirements, TinyWall rules, limits
+- [docs/n2n-research-2026-11-16.md](docs/n2n-research-2026-11-16.md) — n2n research behind it
 
 No official binary is published yet; test builds are shared privately.
 

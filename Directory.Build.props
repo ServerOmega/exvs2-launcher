@@ -6,7 +6,7 @@
     <Company>ServerOmega</Company>
     <Product>EXVS2 Launcher</Product>
     <Copyright>Copyright (c) 2026 ServerOmega. Licensed under GPL-3.0-or-later.</Copyright>
-    <Version>0.4.4</Version>
+    <Version>0.4.5-n2n</Version>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 </Project>

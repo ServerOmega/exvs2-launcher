@@ -1,4 +1,5 @@
 using Exvs2Launcher.Core.Launch;
+using Exvs2Launcher.Core.VirtualLan;
 
 namespace Exvs2Launcher.Core.Profiles;
 
@@ -41,6 +42,11 @@ public sealed class LauncherProfile
     /// itself, and the launcher cannot rename it. Shown next to the cab name so PCB_xx windows are easier to match.
     /// </summary>
     public string? LastGameWindowTitle { get; set; }
+
+    /// <summary>
+    /// Optional n2n virtual LAN mode (off by default). The key is not stored here; see VirtualLanKeyStore.
+    /// </summary>
+    public VirtualLanSettings VirtualLan { get; set; } = new();
 
     public StartPlan ToStartPlan() => new()
     {

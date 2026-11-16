@@ -103,4 +103,22 @@
   <sys:String x:Key="Tip.KeyboardWrite">Write the bindings to config.ini and lmnfig.ini, and to SnowLauncher.ini if that option is on for this profile. A backup is made if a file changes. Close SnowLauncher, the game, and the LM first. Unknown leftover keys such as ButtonR1 are left alone. Empty values are not written, because the hook can refuse to parse a blank key name.</sys:String>
   <sys:String x:Key="Tip.KeyboardClose">Close this window. Unsaved changes are discarded.</sys:String>
   <sys:String x:Key="Tip.KeyboardResetAll">Restore every action in this list to the Infinite Boost pack defaults in this window. Click Write bindings to save them.</sys:String>
+
+  <sys:String x:Key="Tip.VlanEnable">Optional n2n virtual LAN (off by default). When on, Start all first starts your edge.exe (Windows asks for administrator permission), waits for the TAP adapter to get its virtual IP, then writes that IP into config.ini and lmnfig.ini and starts the card server, LM, and client. The card server stays on this PC (127.0.0.1:28080). Everyone in the same community sees each other's LM, like one big LAN. Cabs on a virtual LAN do not mix with the public matchmaker queue. Turn it off to go back to your normal LAN IPs.</sys:String>
+  <sys:String x:Key="Tip.VlanEdge">Path to n2n's edge.exe that you downloaded or built yourself. The launcher does not ship or download it. Every player and the supernode should use the same n2n version (3.x with 3.x).</sys:String>
+  <sys:String x:Key="Tip.VlanSupernode">The n2n supernode as host:port, for example sn.example.net:7654. Your group shares this. Prefer a private supernode near the players.</sys:String>
+  <sys:String x:Key="Tip.VlanCommunity">The community (virtual LAN name) your group uses, up to 19 characters. Kept private: masked here and never written to the log.</sys:String>
+  <sys:String x:Key="Tip.VlanKey">The encryption key for the community (edge -k). It is saved only for this Windows user (encrypted with Windows DPAPI) in a separate file next to the launcher, never in the profiles file, and never shown or logged. Leave the box empty to keep the saved key.</sys:String>
+  <sys:String x:Key="Tip.VlanForgetKey">Delete the saved key for this profile.</sys:String>
+  <sys:String x:Key="Tip.VlanIp">Static: type a fixed address such as 10.77.0.11/24 that nobody else in the community uses. Assigned by supernode: the supernode picks one. DHCP: someone on the virtual LAN runs a DHCP server.</sys:String>
+  <sys:String x:Key="Tip.VlanAdvanced">MTU of the TAP adapter (edge -M). Default 1290 is safe on most connections.</sys:String>
+  <sys:String x:Key="Tip.VlanMetric">Interface metric of the TAP (edge -x). Windows sends LAN broadcasts on the lowest-metric adapter, so the default 1 lets the LM find the others on the TAP.</sys:String>
+  <sys:String x:Key="Tip.VlanAdapter">Only if this PC has more than one TAP adapter: its name from Windows network connections (edge -d). Leave empty otherwise.</sys:String>
+  <sys:String x:Key="Tip.VlanDescription">Optional short name other edges see for you (edge -I), up to 15 characters.</sys:String>
+  <sys:String x:Key="Tip.VlanMulticast">Accept multicast traffic (edge -E). Leave on for this game.</sys:String>
+  <sys:String x:Key="Tip.VlanRelay">Always send traffic through the supernode instead of directly (edge -S1). Only for testing hard NATs such as a phone hotspot; it adds delay.</sys:String>
+  <sys:String x:Key="Tip.VlanHeader">Encrypt n2n packet headers too (edge -H). Every player must use the same setting, and the supernode must know the community.</sys:String>
+  <sys:String x:Key="Tip.VlanStatus">TAP adapter, virtual IP, and peers from edge's management port (localhost UDP 5644). "Via supernode" peers have no direct path yet.</sys:String>
+  <sys:String x:Key="Tip.VlanConnect">Start edge now (with the administrator prompt) without starting the game. Start all does this for you.</sys:String>
+  <sys:String x:Key="Tip.VlanDisconnect">Ask edge to exit cleanly. Close the LM and game first; they lose the virtual LAN.</sys:String>
 </ResourceDictionary>

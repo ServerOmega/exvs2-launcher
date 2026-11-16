@@ -1,4 +1,4 @@
-# Testing the v0.4.0 launcher
+# Testing the v0.4.1 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -140,7 +140,7 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
 3. Do not use EXIT & SAVE in the test menu to make this change. If a cab was already in a session, restart that cab
    so it rereads the file.
 
-## Known gaps in v0.4.0
+## Known gaps in v0.4.1
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.
@@ -153,7 +153,7 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
 - Controller product names come from HID / SetupAPI and Raw Input when Windows exposes them, then WinMM and XInput.
   Matching an XInput slot to a HID device is best-effort (IG_ interface index, then pairing leftover IG_ devices in
   order). A stick that never reports a product string may still show a generic label; you can type the name under
-  Advanced. Button capture still uses XInput or WinMM, not raw HID reports.
+  Advanced. Rebind and the Last pressed line use Raw Input (HID usages mapped to the game's 1-based button ids) with WinMM and XInput as fallbacks. A PS4-mode Razer Panthera should show buttons such as 1 (Square) or 4 (Triangle) when pressed.
 - SnowLauncher.ini `PCB_Resolution` / `LM_Resolution` indexes are not written; only the game INI `Resolution=`
   strings are. `OpeningScreenSkip` is synced to SnowLauncher only for the observed `SkipAll` = `3` pairing.
 - If "Server" is the card server's process name, the launcher treats it as the stock server.

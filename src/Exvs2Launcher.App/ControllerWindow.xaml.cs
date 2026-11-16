@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using Exvs2Launcher.Core.Files;
 using Exvs2Launcher.Core.Input;
@@ -36,14 +37,20 @@ public partial class ControllerWindow : Window
     private readonly ControllerConfigWriter _writer;
     private readonly Action<string> _log;
     private readonly IControllerDeviceSource _devices;
+    private readonly IControllerButtonCapture? _capture;
     private readonly SlotEditor _slot1;
     private readonly SlotEditor _slot2;
-    private readonly DispatcherTimer _bindTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
+    private readonly DispatcherTimer _pollTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
+    private HwndSource? _hwndSource;
     private SlotEditor? _bindingSlot;
     private TextBox? _bindingBox;
     private string? _bindingLabel;
     private DateTime _bindUntil;
+    private HashSet<int> _heldAtBindStart = new();
+    private int? _lastSeenButton;
+    private string? _lastSeenName;
     private IReadOnlyList<ConnectedController> _listed = Array.Empty<ConnectedController>();
+    private const int BindTimeoutSeconds = 8;
 
     public ControllerWindow(LauncherProfile profile, ControllerConfigWriter writer, Action<string> log, Window? owner,
         IControllerDeviceSource? devices = null)
@@ -54,6 +61,7 @@ public partial class ControllerWindow : Window
         _writer = writer;
         _log = log;
         _devices = devices ?? new WindowsControllerDevices();
+        _capture = _devices as IControllerButtonCapture;
         Title = "Controller bindings — " + (string.IsNullOrWhiteSpace(profile.Name) ? "cab" : profile.Name);
 
         XInputModeBox.ItemsSource = Modes;
@@ -64,10 +72,36 @@ public partial class ControllerWindow : Window
         Slot2Host.Content = _slot2.SimpleRoot;
         Slot1AdvancedHost.Content = _slot1.AdvancedRoot;
         Slot2AdvancedHost.Content = _slot2.AdvancedRoot;
-        _bindTimer.Tick += BindTimer_Tick;
-        Closed += (_, _) => _bindTimer.Stop();
+        SourceInitialized += Window_SourceInitialized;
+        Closed += Window_Closed;
+        _pollTimer.Tick += PollTimer_Tick;
+        _pollTimer.Start();
         RefreshDevices();
         LoadFromDisk();
+    }
+
+    private void Window_SourceInitialized(object? sender, EventArgs e)
+    {
+        _hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+        if (_hwndSource is null) return;
+        _hwndSource.AddHook(WndProc);
+        if (_capture is not null && !_capture.StartListening(_hwndSource.Handle))
+            Status("Raw Input could not be started. Rebind will still try WinMM and XInput.");
+    }
+
+    private void Window_Closed(object? sender, EventArgs e)
+    {
+        _pollTimer.Stop();
+        StopBind(cancelled: false, timedOut: false, silent: true);
+        if (_hwndSource is not null) _hwndSource.RemoveHook(WndProc);
+        _capture?.StopListening();
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        const int wmInput = 0x00FF;
+        if (msg == wmInput) _capture?.ProcessRawInput(lParam);
+        return IntPtr.Zero;
     }
 
     private SlotEditor CurrentSlot => SlotTabs.SelectedIndex == 1 ? _slot2 : _slot1;
@@ -200,42 +234,125 @@ public partial class ControllerWindow : Window
         _bindingSlot = slot;
         _bindingBox = box;
         _bindingLabel = label;
-        _bindUntil = DateTime.UtcNow.AddSeconds(4);
-        _bindTimer.Start();
-        Status("Press a button on the controller for " + slot.Section + " " + label + " (4 seconds)…");
+        _bindUntil = DateTime.UtcNow.AddSeconds(BindTimeoutSeconds);
+        _heldAtBindStart = new HashSet<int>(CurrentPressed());
+        CancelBindButton.Visibility = Visibility.Visible;
+        Status("Press a button on the selected controller for " + slot.Section + " " + label +
+               " (" + BindTimeoutSeconds + " seconds, or Cancel)…");
     }
 
-    private void BindTimer_Tick(object? sender, EventArgs e)
+    private void CancelBind_Click(object sender, RoutedEventArgs e) =>
+        StopBind(cancelled: true, timedOut: false, silent: false);
+
+    private void PollTimer_Tick(object? sender, EventArgs e)
     {
-        if (_bindingBox is null)
-        {
-            _bindTimer.Stop();
-            return;
-        }
+        UpdateLastPressed();
+        if (_bindingBox is null) return;
         if (DateTime.UtcNow >= _bindUntil)
         {
-            _bindTimer.Stop();
-            Status("No button was pressed in time. You can type a button number under Advanced, or try again.");
-            _bindingBox = null;
+            StopBind(cancelled: false, timedOut: true, silent: false);
             return;
         }
 
-        IEnumerable<ConnectedController> candidates = _listed;
-        if (DeviceBox.SelectedIndex >= 0 && DeviceBox.SelectedIndex < _listed.Count)
-            candidates = new[] { _listed[DeviceBox.SelectedIndex] }.Concat(_listed.Where((_, i) => i != DeviceBox.SelectedIndex));
-
-        foreach (var dev in candidates)
+        var remaining = Math.Max(1, (int)Math.Ceiling((_bindUntil - DateTime.UtcNow).TotalSeconds));
+        foreach (var dev in BindCandidates())
         {
             IReadOnlyList<int> pressed;
             try { pressed = _devices.PressedButtons(dev); }
             catch { continue; }
-            if (pressed.Count == 0) continue;
-            _bindTimer.Stop();
-            _bindingBox.Text = ControllerCombos.FormatList(pressed);
+            var fresh = pressed.Where(id => !_heldAtBindStart.Contains(id)).ToList();
+            if (fresh.Count == 0) continue;
+            _bindingBox.Text = ControllerCombos.FormatList(fresh);
             Status("Bound " + (_bindingSlot?.Section ?? "controller") + " " + _bindingLabel + " to " + _bindingBox.Text +
                    " (" + dev.Display + "). Click Write bindings to save.");
-            _bindingBox = null;
+            StopBind(cancelled: false, timedOut: false, silent: true);
             return;
+        }
+        Status("Press a button on the selected controller for " + (_bindingSlot?.Section ?? "controller") + " " +
+               _bindingLabel + " (" + remaining + "s left, or Cancel)…");
+    }
+
+    private void StopBind(bool cancelled, bool timedOut, bool silent)
+    {
+        var box = _bindingBox;
+        _bindingBox = null;
+        _bindingSlot = null;
+        _bindingLabel = null;
+        _heldAtBindStart.Clear();
+        CancelBindButton.Visibility = Visibility.Collapsed;
+        if (silent || box is null) return;
+        if (cancelled)
+            Status("Rebind cancelled. The Last pressed line still updates when you press a button.");
+        else if (timedOut)
+            Status("No new button was pressed in time. Check that Last pressed updates when you press the stick. You can also type a button number under Advanced.");
+    }
+
+    private IEnumerable<ConnectedController> BindCandidates()
+    {
+        if (DeviceBox.SelectedIndex >= 0 && DeviceBox.SelectedIndex < _listed.Count)
+            return new[] { _listed[DeviceBox.SelectedIndex] }.Concat(_listed.Where((_, i) => i != DeviceBox.SelectedIndex));
+        return _listed;
+    }
+
+    private ConnectedController? SelectedDevice() =>
+        DeviceBox.SelectedIndex >= 0 && DeviceBox.SelectedIndex < _listed.Count ? _listed[DeviceBox.SelectedIndex] : null;
+
+    private IReadOnlyList<int> CurrentPressed()
+    {
+        foreach (var dev in BindCandidates())
+        {
+            try
+            {
+                var pressed = _devices.PressedButtons(dev);
+                if (pressed.Count > 0) return pressed;
+            }
+            catch { }
+        }
+        return Array.Empty<int>();
+    }
+
+    private void UpdateLastPressed()
+    {
+        var dev = SelectedDevice();
+        IReadOnlyList<int> pressed = Array.Empty<int>();
+        if (dev is not null)
+        {
+            try { pressed = _devices.PressedButtons(dev); }
+            catch { }
+        }
+        if (pressed.Count == 0)
+        {
+            foreach (var other in BindCandidates())
+            {
+                if (ReferenceEquals(other, dev)) continue;
+                try
+                {
+                    pressed = _devices.PressedButtons(other);
+                    if (pressed.Count > 0) { dev = other; break; }
+                }
+                catch { }
+            }
+        }
+        if (pressed.Count > 0)
+        {
+            _lastSeenButton = pressed[0];
+            _lastSeenName = dev?.Name;
+            LastPressedText.Text = "Last pressed: " +
+                (pressed.Count == 1 ? "button " + pressed[0] : "buttons " + string.Join(", ", pressed)) +
+                (dev is null ? "" : "  (" + dev.Name + ")");
+        }
+        else if (_lastSeenButton is int last)
+        {
+            LastPressedText.Text = "Last pressed: button " + last +
+                (string.IsNullOrWhiteSpace(_lastSeenName) ? "" : "  (" + _lastSeenName + ")");
+        }
+        else if (_capture?.LastGameButton is int captured)
+        {
+            LastPressedText.Text = "Last pressed: button " + captured;
+        }
+        else
+        {
+            LastPressedText.Text = "Last pressed: (none yet)";
         }
     }
 

@@ -95,4 +95,6 @@
   <sys:String x:Key="Tip.GraphicsOpening">[config] OpeningScreenSkip in config.ini or lmnfig.ini. Known values: None, SkipReminder, SkipBrand, SkipAll. SnowLauncher.ini is only updated for the observed SkipAll = 3 pairing.</sys:String>
   <sys:String x:Key="Tip.GraphicsReload">Reload the graphics fields from config.ini and lmnfig.ini and discard unsaved changes in this section.</sys:String>
   <sys:String x:Key="Tip.GraphicsWrite">Write the graphics fields to config.ini and lmnfig.ini (and FramerateLimit / known OpeningScreenSkip to SnowLauncher.ini if that option is on). A backup is made if a file changes. Close the game, LM, and SnowLauncher first. Unknown keys are left alone. PCB_Resolution / LM_Resolution indexes are not written.</sys:String>
+  <sys:String x:Key="Tip.ControllerLastPressed">The last button number heard from the selected controller, using the same 1-based ids written to config.ini (for a PS4-mode Razer Panthera, 1 is Square, 4 is Triangle, 10 is Options, and so on). Press a button here before you Rebind if you want to confirm the stick is being read.</sys:String>
+  <sys:String x:Key="Tip.ControllerCancelBind">Stop waiting for a button press. The current binding is left unchanged.</sys:String>
 </ResourceDictionary>

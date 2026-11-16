@@ -8,7 +8,7 @@
         ToolTipService.BetweenShowDelay="200">
   <DockPanel Margin="10">
     <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
-               Text="Pick a controller, then rebind each game action. This writes the game's existing config.ini keys; it is not a new input driver. Combo keys, raw ids, and [xinput] settings are under Advanced." />
+               Text="Pick a controller, then rebind each game action. Rebind listens for the next button press on the selected stick, including a Razer Panthera in PS4 mode, through Raw Input, WinMM, or XInput. The Last pressed line should update when you press a button. Combo keys, raw ids, and [xinput] settings are under Advanced." />
 
     <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
       <TextBlock x:Name="StatusText" TextWrapping="Wrap" Margin="0,0,0,8" />
@@ -23,6 +23,10 @@
       <StackPanel>
         <GroupBox Header="Controller">
           <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
               <ColumnDefinition Width="*" MinWidth="160" />
               <ColumnDefinition Width="Auto" />
@@ -34,6 +38,12 @@
                     ToolTip="{StaticResource Tip.ControllerRefresh}" />
             <Button Grid.Column="2" Content="Use selected controller" Click="UseSelected_Click" Margin="0,2,0,2"
                     ToolTip="{StaticResource Tip.ControllerUseSelected}" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="LastPressedText"
+                       Text="Last pressed: (none yet)" TextWrapping="Wrap" Margin="0,8,6,0"
+                       ToolTip="{StaticResource Tip.ControllerLastPressed}" />
+            <Button Grid.Row="1" Grid.Column="2" x:Name="CancelBindButton" Content="Cancel rebind"
+                    Click="CancelBind_Click" Margin="0,8,0,0" Visibility="Collapsed"
+                    ToolTip="{StaticResource Tip.ControllerCancelBind}" />
           </Grid>
         </GroupBox>
 

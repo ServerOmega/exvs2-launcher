@@ -46,8 +46,17 @@ public interface IControllerDeviceSource
 /// via <c>winmm.dll</c>. This is not a new input driver — it only lists devices and reads button
 /// numbers so the launcher can write the game's existing INI keys. Returns nothing on non-Windows systems.
 /// </summary>
-public sealed class WindowsControllerDevices : IControllerDeviceSource
+public sealed class WindowsControllerDevices : IControllerDeviceSource, IControllerButtonCapture
 {
+    private readonly RawInputButtonCapture _raw = new();
+
+    public bool StartListening(IntPtr hwnd) => _raw.StartListening(hwnd);
+    public void StopListening() => _raw.StopListening();
+    public bool ProcessRawInput(IntPtr lParam) => _raw.ProcessRawInput(lParam);
+    public IReadOnlyList<int> CachedButtons(ConnectedController device) => _raw.CachedButtons(device);
+    public int? LastGameButton => _raw.LastGameButton;
+    public string? LastButtonLabel => _raw.LastButtonLabel;
+
     public IReadOnlyList<ConnectedController> List()
     {
         if (!OperatingSystem.IsWindows()) return Array.Empty<ConnectedController>();
@@ -69,10 +78,22 @@ public sealed class WindowsControllerDevices : IControllerDeviceSource
         if (!OperatingSystem.IsWindows() || device is null) return Array.Empty<int>();
         try
         {
+            // XInput pads must keep the XInput button numbers (1=A … 10=RS), not HID usages.
             if (device.XInputIndex is int slot)
                 return PressedXInput(slot);
+
+            // A PS4-mode fight stick such as a Razer Panthera is often visible as HID / Raw Input
+            // even when WinMM lists it but reports no buttons. Prefer a fresh Raw Input cache.
+            var raw = _raw.CachedButtons(device);
+            if (raw.Count > 0) return raw;
+
             if (device.WinmmId is int joy)
-                return PressedWinmm(joy);
+            {
+                var winmm = PressedWinmm(joy);
+                if (winmm.Count > 0) return winmm;
+            }
+
+            return raw;
         }
         catch (Exception) { }
         return Array.Empty<int>();

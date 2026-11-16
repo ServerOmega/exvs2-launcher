@@ -758,12 +758,6 @@ public partial class MainWindow : Window
         RefreshGameState();
     }
 
-    private void Graphics_Click(object sender, RoutedEventArgs e)
-    {
-        GraphicsBox.BringIntoView();
-        ClientResolutionBox.Focus();
-    }
-
     private void ReloadGraphics_Click(object sender, RoutedEventArgs e)
     {
         var folder = GameFolderBox.Text.Trim();

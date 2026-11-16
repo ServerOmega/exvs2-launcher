@@ -46,6 +46,14 @@ internal sealed class FakeWorld : IProcessStarter, IPortProbe, IPortOwnerLookup,
 
     public PortOwner? FindListener(int port) => Listening ? Owner : null;
 
+    /// <summary>Simulate the card server actually closing, so the next Start all must launch it again.</summary>
+    public void ClosePort()
+    {
+        Listening = false;
+        Owner = null;
+        _probesAfterStart = -1;
+    }
+
     public Task WaitAsync(TimeSpan duration, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
@@ -274,10 +282,138 @@ public class StartSequencerTests
     [Fact]
     public async Task Second_run_while_running_is_refused()
     {
-        var (seq, _) = Make();
+        var (seq, w) = Make();
         await seq.RunAsync(Plan());
         var r = await seq.RunAsync(Plan());
-        Assert.Contains("already", r.Message);
+        Assert.Contains("already", r.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(StartStage.Running, r.FinalStage);
+        Assert.Equal(3, w.Events.Count(e => e.StartsWith("start:")));
+    }
+
+    private static StartPlan RolePlan(bool server = false, bool lm = false, bool client = false) => new()
+    {
+        GameFolder = Game,
+        CardServerPath = Bat,
+        StartCardServer = server,
+        StartLm = lm,
+        StartClient = client,
+        ReuseRunningPatchedServer = true,
+        RequireCardServerPort = server,
+        PortTimeout = TimeSpan.FromSeconds(5),
+        PollInterval = TimeSpan.FromSeconds(1),
+        LmToClientDelay = TimeSpan.Zero,
+    };
+
+    [Fact]
+    public async Task After_start_all_stop_lm_and_client_can_start_those_roles_again()
+    {
+        var (seq, w) = Make();
+        Assert.True((await seq.RunAsync(Plan())).Succeeded);
+        Assert.Equal(StartStage.Running, seq.Stage);
+
+        Assert.Equal(1, seq.StopRole(ComponentRoles.Lm, Plan()));
+        Assert.Equal(1, seq.StopRole(ComponentRoles.Client, Plan()));
+        Assert.False(w.Processes.Single(p => p.Role == "Card server").Killed);
+        Assert.True(w.Processes.Single(p => p.Role == "LM").Killed);
+        Assert.True(w.Processes.Single(p => p.Role == "Client").Killed);
+        // Card server is still tracked, so Stage stays Running — this used to block any new start.
+        Assert.Equal(StartStage.Running, seq.Stage);
+
+        var lm = await seq.RunAsync(RolePlan(lm: true));
+        Assert.True(lm.Succeeded, lm.Message);
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:LM")));
+        Assert.Equal(1, w.Events.Count(e => e.StartsWith("start:Client")));
+        Assert.False(w.Processes[0].Killed);
+
+        var client = await seq.RunAsync(RolePlan(client: true));
+        Assert.True(client.Succeeded, client.Message);
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:Client")));
+        Assert.Single(w.Events, e => e.StartsWith("start:Card server"));
+        Assert.Equal(StartStage.Running, seq.Stage);
+    }
+
+    [Fact]
+    public async Task After_start_all_stop_lm_and_client_start_all_reuses_the_card_server()
+    {
+        var (seq, w) = Make();
+        Assert.True((await seq.RunAsync(Plan())).Succeeded);
+        seq.StopRole(ComponentRoles.Lm, Plan());
+        seq.StopRole(ComponentRoles.Client, Plan());
+
+        var r = await seq.RunAsync(Plan());
+        Assert.True(r.Succeeded, r.Message);
+        Assert.Single(w.Events, e => e.StartsWith("start:Card server"));
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:LM")));
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:Client")));
+        Assert.False(w.Processes[0].Killed);
+        Assert.Equal(StartStage.Running, seq.Stage);
+    }
+
+    [Fact]
+    public async Task After_start_all_and_stop_all_roles_start_lm_and_start_all_work()
+    {
+        var (seq, w) = Make();
+        Assert.True((await seq.RunAsync(Plan())).Succeeded);
+        foreach (var role in new[] { ComponentRoles.Client, ComponentRoles.Lm, ComponentRoles.CardServer })
+            seq.StopRole(role, Plan());
+        Assert.Equal(StartStage.Idle, seq.Stage);
+
+        // StopRole does not touch the fake port probe; the real Stop all kills the server.
+        w.ClosePort();
+
+        var lm = await seq.RunAsync(RolePlan(lm: true));
+        Assert.True(lm.Succeeded, lm.Message);
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:LM")));
+        // LM-only does not require the card server port, so it should not start the server.
+        Assert.Single(w.Events, e => e.StartsWith("start:Card server"));
+
+        seq.StopRole(ComponentRoles.Lm, Plan());
+        var all = await seq.RunAsync(Plan());
+        Assert.True(all.Succeeded, all.Message);
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:Card server")));
+        Assert.Equal(3, w.Events.Count(e => e.StartsWith("start:LM")));
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:Client")));
+        Assert.Equal(StartStage.Running, seq.Stage);
+    }
+
+    [Fact]
+    public async Task After_lm_and_client_exit_on_their_own_they_can_be_started_again()
+    {
+        var (seq, w) = Make();
+        Assert.True((await seq.RunAsync(Plan())).Succeeded);
+        w.Processes.Single(p => p.Role == "LM").Exited = true;
+        w.Processes.Single(p => p.Role == "Client").Exited = true;
+        // Stage is still Running until prune; a new start must not be refused.
+        Assert.Equal(StartStage.Running, seq.Stage);
+
+        var lm = await seq.RunAsync(RolePlan(lm: true));
+        Assert.True(lm.Succeeded, lm.Message);
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:LM")));
+        Assert.Equal(StartStage.Running, seq.Stage);
+
+        var client = await seq.RunAsync(RolePlan(client: true));
+        Assert.True(client.Succeeded, client.Message);
+        Assert.Equal(2, w.Events.Count(e => e.StartsWith("start:Client")));
+        Assert.Single(w.Events, e => e.StartsWith("start:Card server"));
+    }
+
+    [Fact]
+    public async Task Second_run_is_refused_while_a_start_is_in_progress()
+    {
+        var (seq, w) = Make(x => x.ProbesUntilListening = -1);
+        StartOutcome? second = null;
+        seq.StageChanged += s =>
+        {
+            if (s == StartStage.WaitingForPort && second is null)
+                second = seq.RunAsync(Plan()).GetAwaiter().GetResult();
+        };
+
+        var first = await seq.RunAsync(Plan());
+        Assert.Equal(StartStage.Failed, first.FinalStage);
+        Assert.NotNull(second);
+        Assert.Contains("already in progress", second!.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(w.Events, e => e.StartsWith("start:LM") || e.StartsWith("start:Client"));
+        Assert.Equal(1, w.Events.Count(e => e.StartsWith("start:Card server")));
     }
 
     [Theory]

@@ -41,7 +41,6 @@
             <Button Content="Open web page" Click="OpenWeb_Click" ToolTip="{StaticResource Tip.OpenWeb}" />
             <Button Content="Controllers..." Click="Controllers_Click" ToolTip="{StaticResource Tip.Controllers}" />
             <Button Content="Keyboard..." Click="Keyboard_Click" ToolTip="{StaticResource Tip.Keyboard}" />
-            <Button Content="Graphics..." Click="Graphics_Click" ToolTip="{StaticResource Tip.Graphics}" />
           </WrapPanel>
           <TextBlock Grid.Column="1" x:Name="StageText" VerticalAlignment="Center" Margin="10,0,0,0"
                      FontWeight="SemiBold" Text="Idle" TextWrapping="Wrap" />

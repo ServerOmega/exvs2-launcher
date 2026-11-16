@@ -37,9 +37,23 @@ public sealed class StartSequencer
 
     public async Task<StartOutcome> RunAsync(StartPlan plan, CancellationToken ct = default)
     {
-        if (Stage is not (StartStage.Idle or StartStage.Failed or StartStage.Cancelled))
-            return new StartOutcome(Stage, "A start is already in progress or running.", _started.ToList());
-        _started.RemoveAll(p => p.HasExited);
+        // Only block a second start while one is mid-flight. Stage.Running is not a lock:
+        // after Start all, stopping (or closing) LM/Client leaves the card server tracked
+        // and Stage at Running, and the user must be able to start those roles again.
+        if (IsStartInProgress)
+        {
+            const string busy = "A start is already in progress.";
+            Say(busy);
+            return new StartOutcome(Stage, busy, _started.ToList());
+        }
+        PruneExited();
+        if (AllRequestedRolesRunning(plan, out var already))
+        {
+            string msg = "Already running: " + string.Join(", ", already) + ".";
+            Say(msg);
+            if (Stage != StartStage.Running) Enter(StartStage.Running);
+            return new StartOutcome(StartStage.Running, msg, _started.ToList());
+        }
 
         try
         {
@@ -106,19 +120,35 @@ public sealed class StartSequencer
 
             if (plan.StartLm)
             {
-                Enter(StartStage.StartingLm);
-                StartProcess("LM", game.LmExe, "", game.Root);
-                if (plan.StartClient && plan.LmToClientDelay > TimeSpan.Zero)
+                var existingLm = RoleStatus(ComponentRoles.Lm, plan);
+                if (existingLm.Running)
                 {
-                    Enter(StartStage.WaitingBeforeClient);
-                    await _delay.WaitAsync(plan.LmToClientDelay, ct).ConfigureAwait(false);
+                    Say($"LM is already running (pid {existingLm.Pid}).");
+                }
+                else
+                {
+                    Enter(StartStage.StartingLm);
+                    StartProcess("LM", game.LmExe, "", game.Root);
+                    if (plan.StartClient && plan.LmToClientDelay > TimeSpan.Zero)
+                    {
+                        Enter(StartStage.WaitingBeforeClient);
+                        await _delay.WaitAsync(plan.LmToClientDelay, ct).ConfigureAwait(false);
+                    }
                 }
             }
 
             if (plan.StartClient)
             {
-                Enter(StartStage.StartingClient);
-                StartProcess("Client", game.ClientExe, "", game.Root);
+                var existingClient = RoleStatus(ComponentRoles.Client, plan);
+                if (existingClient.Running)
+                {
+                    Say($"Client is already running (pid {existingClient.Pid}).");
+                }
+                else
+                {
+                    Enter(StartStage.StartingClient);
+                    StartProcess("Client", game.ClientExe, "", game.Root);
+                }
             }
 
             Enter(StartStage.Running);
@@ -178,13 +208,13 @@ public sealed class StartSequencer
             }
         }
         if (n == 0) Say($"{role} is not running for this profile.");
-        if (_started.All(p => p.HasExited)) Enter(StartStage.Idle);
+        PruneExited();
         return n;
     }
 
     public ComponentStatus RoleStatus(string role, StartPlan plan)
     {
-        _started.RemoveAll(p => p.HasExited);
+        PruneExited();
         return ProfileProcessMatcher.Status(role, plan, _started, SafeList());
     }
 
@@ -199,6 +229,43 @@ public sealed class StartSequencer
             Say("Could not list running programs: " + ex.Message);
             return Array.Empty<RunningProcessInfo>();
         }
+    }
+
+    /// <summary>
+    /// True while a start sequence is mid-flight. <see cref="StartStage.Running"/> is a completed
+    /// start, not a lock, so individual roles can be started again after they are stopped.
+    /// </summary>
+    public bool IsStartInProgress => Stage is not (StartStage.Idle or StartStage.Failed or StartStage.Cancelled or StartStage.Running);
+
+    private void PruneExited()
+    {
+        _started.RemoveAll(p => p.HasExited);
+        if (Stage == StartStage.Running && _started.Count == 0)
+            Enter(StartStage.Idle);
+    }
+
+    private bool AllRequestedRolesRunning(StartPlan plan, out List<string> running)
+    {
+        running = new List<string>();
+        if (plan.StartCardServer)
+        {
+            var status = RoleStatus(ComponentRoles.CardServer, plan);
+            if (!status.Running) return false;
+            running.Add(ComponentRoles.CardServer);
+        }
+        if (plan.StartLm)
+        {
+            var status = RoleStatus(ComponentRoles.Lm, plan);
+            if (!status.Running) return false;
+            running.Add(ComponentRoles.Lm);
+        }
+        if (plan.StartClient)
+        {
+            var status = RoleStatus(ComponentRoles.Client, plan);
+            if (!status.Running) return false;
+            running.Add(ComponentRoles.Client);
+        }
+        return running.Count > 0;
     }
 
     public string? Validate(StartPlan plan)

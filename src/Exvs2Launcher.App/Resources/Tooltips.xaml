@@ -85,7 +85,6 @@
   <sys:String x:Key="Tip.ControllerDeviceId">0–15 selects one pad or stick; 16 means all devices. On [controller] this is the hook's DeviceId field.</sys:String>
   <sys:String x:Key="Tip.ControllerUseSelected">Copy the selected controller into the current tab (Controller 1 or 2). The INI Name= value stays the game-compatible stored name, even when the list shows a shorter product name.</sys:String>
   <sys:String x:Key="Tip.ControllerAdvanced">Combo buttons (AB, BC, AC, ABC), the raw Name / Mode / DeviceId fields, and [xinput] EmulatedXInputEnabled / Mode / DeviceId. Leave these alone unless you need them.</sys:String>
-  <sys:String x:Key="Tip.Graphics">Jump to the Graphics and resolution section. Client and LM settings are stored separately in config.ini and lmnfig.ini.</sys:String>
   <sys:String x:Key="Tip.GraphicsClient">These columns write config.ini for the game client. Typical client resolution on this PC is 480p.</sys:String>
   <sys:String x:Key="Tip.GraphicsLm">These columns write lmnfig.ini for the Live Monitor. Typical LM resolution on this PC is 144p.</sys:String>
   <sys:String x:Key="Tip.GraphicsResolution">[display] Resolution= in config.ini or lmnfig.ini. Known values: 144p, 240p, 480p, 720p, 1080p, 2k, 4k, 8k. The box is editable if a file already has another token. Client and LM are independent. 8k is documented as needing Windowed and Borderless both on.</sys:String>

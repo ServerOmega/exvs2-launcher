@@ -146,7 +146,9 @@ For matchmaking, every cabinet needs a **unique** serial (four random characters
 
 SnowLauncher is a mapping editor, not the input driver. It writes keyboard and controller bindings into the INI files that the hook/game already understand.
 
-Observed client keyboard defaults (pack default, not something to copy as a requirement): WASD movement, J/I/K/L face buttons, combo keys on U/O/Y/T, Enter = Start, `5` = Coin, `4` = Card, F3 = Test, F4 = Kill.
+Observed client keyboard defaults (pack default, not something to copy as a requirement): WASD movement, J/I/K/L face buttons, combo keys on U/O/Y/T, Enter = Start (stored as `Return` in the INI), `5` = Coin, `4` = Card, F3 = Test, F4 = Kill. Observed LM keyboard defaults: arrow keys, Z/X/C/V face buttons, Q = Start, `5` = Coin, P = Card, F3 = Test, F4 = Kill.
+
+The IB hook in `bngrw.dll` (client) reads `config.ini` `[keyboard]`; `lmgrw.dll` (LM) reads `lmnfig.ini` `[keyboard]`. Confirmed hook keys: `Enabled`, `Up`, `Down`, `Left`, `Right`, `A`, `B`, `C`, `D`, `Start`, `Coin`, `Card`, `Test`, `Service`, `Kill`. Key *values* use the VirtualKeyNames spellings (`Return`, `UpArr`, `F3`, `1 (NumPad)`, …). The IB hook also contains the exact string `Enter`, treated as an alias of `Return`; the pack writes `Return`. Leftover lines such as `ButtonR1` in some `config.ini` files are not hook keys.
 
 Controller section stores a device name (Xbox pads, "Razer Panthera PS4", and similar), numeric button ids, and optional combo lists. `config.ini` may also have `[xinput]` / `Mode=xinput-native` and a `DeviceId` field (0–15, or 16 = all devices).
 

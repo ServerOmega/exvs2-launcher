@@ -1,4 +1,4 @@
-# Testing the v0.4.1 launcher
+# Testing the v0.4.2 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -118,12 +118,21 @@ LM/client need a longer "LM → client delay", and whether the PCB and LM IPs it
    an action waits for a press and fills the 1-based button id; **Clear** empties it. **Write bindings** backs up
    `config.ini` (and SnowLauncher.ini if that option is on) and writes only the known keys — arcade bitmasks and
    comments stay as they were. Close SnowLauncher and the game first.
-4. Under **Server settings**, the card server host/port should match this cab. `Server=` from `config.ini` and
+4. Click **Keyboard...**. The window should show two lists, Client (`config.ini`) and LM (`lmnfig.ini`).
+   Each action should show its current key (the usual pack client layout is WASD, J/I/K/L, combos on U/O/Y/T,
+   Enter stored as `Return`, `5` coin, `4` card, F3 test, F4 kill; the LM uses the arrow keys, Z/X/C/V, Q start,
+   `5` coin, P card, F3 test, F4 kill). **Rebind** next to an action waits up to 8 seconds for a key press and
+   fills the hook name (`Return` for Enter, `UpArr` for the up arrow, `1 (NumPad)` for numpad 1). A key the hook
+   has no name for (Shift, Ctrl, semicolon, and similar) should be refused, not written. **Reset** restores that
+   row to the pack default. **Write bindings** backs up `config.ini` and `lmnfig.ini` (and SnowLauncher.ini if
+   that option is on) and writes only the known hook keys — leftover lines such as `ButtonR1` stay as they were.
+   Close SnowLauncher, the game, and the LM first, then restart them to pick up the change.
+5. Under **Server settings**, the card server host/port should match this cab. `Server=` from `config.ini` and
    `lmnfig.ini` is shown, along with `DisableSocketHook`. If a `Configurations/server.json` sits next to the card
    server, MatchUrl is shown. The tag secret box stays empty; the note should say whether a secret is already set,
    never the value. **Write server.json** updates MatchUrl (and StunHost) and, if you pasted a secret, the secret —
    the log must not print the secret. Leave the box empty to keep an existing secret.
-5. With the card server running, click **Open web page**. The default browser should open `http://127.0.0.1:28080/`
+6. With the card server running, click **Open web page**. The default browser should open `http://127.0.0.1:28080/`
    (or this cab's host/port). That is the card server WebUI (`/` or `/Cards`).
 
 ## 7. Wizard sets battleMode to 0
@@ -140,7 +149,7 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
 3. Do not use EXIT & SAVE in the test menu to make this change. If a cab was already in a session, restart that cab
    so it rereads the file.
 
-## Known gaps in v0.4.1
+## Known gaps in v0.4.2
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.
@@ -154,6 +163,10 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
   Matching an XInput slot to a HID device is best-effort (IG_ interface index, then pairing leftover IG_ devices in
   order). A stick that never reports a product string may still show a generic label; you can type the name under
   Advanced. Rebind and the Last pressed line use Raw Input (HID usages mapped to the game's 1-based button ids) with WinMM and XInput as fallbacks. A PS4-mode Razer Panthera should show buttons such as 1 (Square) or 4 (Triangle) when pressed.
+- Keyboard rebind only writes names from the hook's confirmed key table (the public VirtualKeyNames list the hook
+  comments point at, plus `Enter` as an alias of `Return`). Shift, Ctrl, Alt, Win, Caps Lock, and punctuation have
+  no hook name, so they cannot be bound. Extra keys observed in some `config.ini` files (`ButtonA=1 (NumPad)`,
+  `ButtonR1`, and similar) are not hook keys and are left alone.
 - SnowLauncher.ini `PCB_Resolution` / `LM_Resolution` indexes are not written; only the game INI `Resolution=`
   strings are. `OpeningScreenSkip` is synced to SnowLauncher only for the observed `SkipAll` = `3` pairing.
 - If "Server" is the card server's process name, the launcher treats it as the stock server.

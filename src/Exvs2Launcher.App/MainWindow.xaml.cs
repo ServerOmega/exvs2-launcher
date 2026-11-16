@@ -749,6 +749,15 @@ public partial class MainWindow : Window
         RefreshGameState();
     }
 
+    private void Keyboard_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current is null) { Warn("Create a cab profile first."); return; }
+        if (!ReadForm()) return;
+        var win = new KeyboardWindow(_current, new KeyboardConfigWriter(), Log, this);
+        win.ShowDialog();
+        RefreshGameState();
+    }
+
     private void Graphics_Click(object sender, RoutedEventArgs e)
     {
         GraphicsBox.BringIntoView();

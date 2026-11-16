@@ -140,4 +140,16 @@ public class IniDocumentTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void Remove_deletes_only_the_named_key()
+    {
+        var doc = IniDocument.Parse("[keyboard]\r\nEnabled=True\r\nUp=W\r\nService=F2\r\nKill=F4\r\n", new TextFormat(new UTF8Encoding(false), false, "\r\n", true));
+        Assert.True(doc.Remove("keyboard", "Service"));
+        Assert.False(doc.Remove("keyboard", "Service"));
+        Assert.False(doc.Remove("keyboard", "Nope"));
+        Assert.Null(doc.Get("keyboard", "Service"));
+        Assert.Equal("W", doc.Get("keyboard", "Up"));
+        Assert.Equal("[keyboard]\r\nEnabled=True\r\nUp=W\r\nKill=F4\r\n", doc.ToText());
+    }
 }

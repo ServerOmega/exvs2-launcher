@@ -124,6 +124,18 @@ public sealed class IniDocument
         return true;
     }
 
+    /// <summary>
+    /// Removes a key from a section if it is present. Comments and other keys are left alone.
+    /// Returns true when the document changed.
+    /// </summary>
+    public bool Remove(string section, string key)
+    {
+        int idx = FindKey(section, key);
+        if (idx < 0) return false;
+        _lines.RemoveAt(idx);
+        return true;
+    }
+
     private int FindSection(string section)
     {
         for (int i = 0; i < _lines.Count; i++)

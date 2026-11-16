@@ -128,7 +128,7 @@ Read `<game>\29\testmode_pcb.json`. The game selects a `group[N]` of the active 
 
 Edit the *card server* configuration, not the game INI:
 
-- MatchUrl should point at the VPS matchmaker (port 28080 in the current deployment).
+- MatchUrl should point at the VPS matchmaker (port **28090**). The local card server and its web page stay on port **28080**.
 - Tag secret: show where the VPS host finds it, and where it is pasted on each card server, without ever committing the value. Prefer "read from a local secret file" over putting the secret in the profile JSON.
 
 This complements the setup guide in the matchmaking repo.

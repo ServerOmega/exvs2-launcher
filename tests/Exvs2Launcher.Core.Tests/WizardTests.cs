@@ -198,9 +198,12 @@ public class GameFolderValidatorTests
 public class CardServerConfigTests
 {
     [Theory]
+    [InlineData("203.0.113.10", "http://203.0.113.10:28090/match", "203.0.113.10")]
+    [InlineData("203.0.113.10:28090", "http://203.0.113.10:28090/match", "203.0.113.10")]
     [InlineData("203.0.113.10:28080", "http://203.0.113.10:28080/match", "203.0.113.10")]
     [InlineData("http://mm.example:28080/match", "http://mm.example:28080/match", "mm.example")]
-    [InlineData("https://mm.example/match", "https://mm.example:28080/match", "mm.example")]
+    [InlineData("http://mm.example:28090/match", "http://mm.example:28090/match", "mm.example")]
+    [InlineData("https://mm.example/match", "https://mm.example:28090/match", "mm.example")]
     public void Normalizes_match_url(string input, string url, string host)
     {
         Assert.True(CardServerConfig.TryNormalizeMatchUrl(input, out var got, out var h, out var err), err);
@@ -216,6 +219,15 @@ public class CardServerConfigTests
     {
         Assert.False(CardServerConfig.TryNormalizeMatchUrl(input, out _, out _, out var err));
         Assert.False(string.IsNullOrWhiteSpace(err));
+    }
+
+    [Fact]
+    public void Warns_when_a_remote_match_url_uses_the_card_server_port()
+    {
+        Assert.Contains("28090", CardServerConfig.RemotePortWarning("203.0.113.10:28080"));
+        Assert.Null(CardServerConfig.RemotePortWarning("203.0.113.10:28090"));
+        Assert.Null(CardServerConfig.RemotePortWarning("203.0.113.10"));
+        Assert.Null(CardServerConfig.RemotePortWarning("127.0.0.1:28080"));
     }
 
     [Fact]
@@ -242,6 +254,7 @@ public class CardServerConfigTests
         var report = CardServerConfig.Apply(json, "203.0.113.9:28080", "new-secret-value-123", new BackupService(() => new DateTime(2026, 11, 15, 12, 0, 0)));
         Assert.Contains(json, report.Written);
         Assert.Contains(report.Notes, n => n.Contains("MatchUrl") && n.Contains("http://203.0.113.9:28080/match"));
+        Assert.Contains(report.Notes, n => n.Contains("28090") && n.Contains("28080"));
         Assert.Contains(report.Notes, n => n.Contains("TagSecret") && n.Contains(Secrets.Mask("new-secret-value-123")));
         foreach (var n in report.Notes.Concat(report.Written).Concat(report.Backups))
         {

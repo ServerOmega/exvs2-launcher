@@ -19,6 +19,9 @@ public static class CardServerConfig
     public const string ReleaseDownloadUrl = "https://github.com/ServerOmega/exvs2-matchmaking/releases";
     public const string SetupA8Url = "https://github.com/ServerOmega/exvs2-matchmaking/blob/main/docs/SETUP.md#a8-online-tag-shared-secret-tagsecret";
 
+    /// <summary>Port of a public / VPS matchmaker. The local card server (and its web page) stays on 28080.</summary>
+    public const int DefaultMatchmakerPort = 28090;
+
     public static string? FindServerJson(string? cardServerPath)
     {
         foreach (var candidate in CandidateJsonPaths(cardServerPath))
@@ -118,7 +121,7 @@ public static class CardServerConfig
         error = null;
         if (string.IsNullOrWhiteSpace(input))
         {
-            error = "Enter the matchmaker address (for example 203.0.113.10:28080 or http://host:28080/match).";
+            error = "Enter the matchmaker address (for example 203.0.113.10:28090 or http://host:28090/match).";
             return false;
         }
 
@@ -141,7 +144,7 @@ public static class CardServerConfig
             return false;
         }
 
-        int port = uri.IsDefaultPort ? 28080 : uri.Port;
+        int port = uri.IsDefaultPort ? DefaultMatchmakerPort : uri.Port;
         if (port is <= 0 or > 65535)
         {
             error = "The matchmaker port is not valid.";
@@ -186,6 +189,9 @@ public static class CardServerConfig
         {
             report.Unchanged.Add(jsonPath);
             report.Notes.Add("Card server config already has the requested matchmaker settings.");
+            var existingWarn = RemotePortWarning(url ?? matchUrl ?? existing?.MatchUrl);
+            if (existingWarn is not null)
+                report.Notes.Add(existingWarn);
             return report;
         }
 
@@ -225,9 +231,25 @@ public static class CardServerConfig
         report.Written.Add(jsonPath);
         if (url is not null)
             report.Notes.Add("Updated OnlineMatching.MatchUrl to " + url + (stunHost is null ? "" : " and StunHost to " + stunHost) + ".");
+        var portWarn = RemotePortWarning(url ?? matchUrl);
+        if (portWarn is not null)
+            report.Notes.Add(portWarn);
         if (writeSecret)
             report.Notes.Add("Updated OnlineTag.TagSecret " + Secrets.Mask(tagSecret) + ". The value is stored only in the card server config and is never logged.");
         return report;
+    }
+
+    /// <summary>
+    /// Warns when a non-local MatchUrl uses port 28080, which is the local card server (and its web page).
+    /// The public matchmaker is on 28090. Returns null when there is nothing to warn about.
+    /// </summary>
+    public static string? RemotePortWarning(string? matchUrl)
+    {
+        if (!TryNormalizeMatchUrl(matchUrl, out var url, out _, out _) || url is null)
+            return null;
+        if (!url.Contains(":28080", StringComparison.Ordinal))
+            return null;
+        return "Port 28080 is your local card server (and its web page). The public matchmaker is on 28090. If this address is a VPS, use :28090.";
     }
 
     private static bool LoopbackIsPublicMistake(string host) =>

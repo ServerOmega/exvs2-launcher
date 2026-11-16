@@ -22,6 +22,10 @@ Private preview. Docs and a proposed architecture are in:
 
 No official binary is published yet.
 
+## Community
+
+Join the [EXVS2 matchmaking Discord](https://discord.gg/YENXAmjkYX) for guides, troubleshooting and updates.
+
 ## Related project
 
 - Card server + VPS matchmaker: https://github.com/ServerOmega/exvs2-matchmaking

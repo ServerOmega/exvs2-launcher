@@ -4,7 +4,7 @@ An open, clean-room launcher for **Mobile Suit Gundam: Extreme Vs. 2 Infinite Bo
 
 This project is **not affiliated with**, endorsed by, or derived from Bandai Namco, SnowLauncher, TeknoParrot, or EXVS2-POC. It does not include game data, hook DLLs, or any third-party launcher binaries. You must supply your own legally obtained game installation.
 
-The first milestone is documentation and design only. A license has not been chosen yet (see `LICENSE`).
+The first milestone is documentation and design only. Licensed under GPL-3.0-or-later (see `LICENSE`). Active development is on the `mvp` branch.
 
 ## Why this exists
 
@@ -28,4 +28,4 @@ No official binary is published yet.
 
 ## License
 
-License pending. See `LICENSE`. Until one is chosen, no permission is granted to redistribute this repository beyond the access already given to collaborators.
+Copyright (c) 2026 ServerOmega. Licensed under the GNU General Public License v3.0 or later. See `LICENSE`.

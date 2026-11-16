@@ -154,9 +154,10 @@ A replacement should edit the same INI keys and let the existing hook/game handl
 
 ## Resolution and window options
 
-- Client and LM each have a resolution setting (`PCB_Resolution` / `LM_Resolution` in SnowLauncher; `[display] Resolution=` such as `1080p`, `480p`, `144p` in the game INI).
+- Client and LM each have a resolution setting (`PCB_Resolution` / `LM_Resolution` in SnowLauncher; `[display] Resolution=` in the game INI). Observed or documented Resolution tokens: `144p`, `240p`, `480p`, `720p`, `1080p`, `2k`, `4k`, `8k`. The SnowLauncher integer indexes do not have a complete observed table (a client value of `2` has been seen next to both `720p` and, in earlier notes, `1080p`), so a replacement should write the game INI string and leave those indexes alone.
 - `Windowed` and `BorderlessWindow` live in `config.ini` / `lmnfig.ini`.
 - `FramerateLimit` is present in both places.
+- `OpeningScreenSkip` in the game INI uses `None`, `SkipReminder`, `SkipBrand`, or `SkipAll`. `OpeningScreenSkip=3` in SnowLauncher.ini was observed as `SkipAll` in `config.ini`; other integer mappings are unverified.
 - `ClientWindow` / `LMWindow` appear to be placement presets; the exact enum is not documented here.
 
 `29\testmode_pcb.json` (battleMode and other test-mode settings) is **not** part of SnowLauncher.ini. The game picks a time-slot group from that JSON. A replacement launcher should edit it directly; SnowLauncher does not appear to.

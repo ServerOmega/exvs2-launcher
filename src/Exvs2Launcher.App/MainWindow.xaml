@@ -40,6 +40,7 @@
             <Button Content="Check port" Click="CheckPort_Click" ToolTip="{StaticResource Tip.CheckPort}" />
             <Button Content="Open web page" Click="OpenWeb_Click" ToolTip="{StaticResource Tip.OpenWeb}" />
             <Button Content="Controllers..." Click="Controllers_Click" ToolTip="{StaticResource Tip.Controllers}" />
+            <Button Content="Graphics..." Click="Graphics_Click" ToolTip="{StaticResource Tip.Graphics}" />
           </WrapPanel>
           <TextBlock Grid.Column="1" x:Name="StageText" VerticalAlignment="Center" Margin="10,0,0,0"
                      FontWeight="SemiBold" Text="Idle" TextWrapping="Wrap" />
@@ -170,6 +171,61 @@
                          Text="Also update SnowLauncher.ini if it exists (so SnowLauncher won't put old values back)" />
             </CheckBox>
           </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Graphics and resolution" x:Name="GraphicsBox">
+          <StackPanel>
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,8"
+                       Text="Client (config.ini) and LM (lmnfig.ini) resolutions are stored separately. A typical 4-cab layout is LM at 144p and each client at 480p. Files are backed up before they change. Close the game and LM first so they reread the values." />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="140" />
+                <ColumnDefinition Width="*" MinWidth="140" />
+                <ColumnDefinition Width="*" MinWidth="140" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <Label Grid.Row="0" Grid.Column="1" Content="Client" ToolTip="{StaticResource Tip.GraphicsClient}" />
+              <Label Grid.Row="0" Grid.Column="2" Content="LM" ToolTip="{StaticResource Tip.GraphicsLm}" />
+
+              <Label Grid.Row="1" Content="Resolution" ToolTip="{StaticResource Tip.GraphicsResolution}" />
+              <ComboBox Grid.Row="1" Grid.Column="1" x:Name="ClientResolutionBox" IsEditable="True" Margin="0,2,6,2"
+                        ToolTip="{StaticResource Tip.GraphicsResolution}" />
+              <ComboBox Grid.Row="1" Grid.Column="2" x:Name="LmResolutionBox" IsEditable="True" Margin="0,2,6,2"
+                        ToolTip="{StaticResource Tip.GraphicsResolution}" />
+
+              <Label Grid.Row="2" Content="Windowed" ToolTip="{StaticResource Tip.GraphicsWindowed}" />
+              <CheckBox Grid.Row="2" Grid.Column="1" x:Name="ClientWindowedCheck" IsThreeState="True"
+                        Content="Windowed" VerticalAlignment="Center" ToolTip="{StaticResource Tip.GraphicsWindowed}" />
+              <CheckBox Grid.Row="2" Grid.Column="2" x:Name="LmWindowedCheck" IsThreeState="True"
+                        Content="Windowed" VerticalAlignment="Center" ToolTip="{StaticResource Tip.GraphicsWindowed}" />
+
+              <Label Grid.Row="3" Content="Borderless" ToolTip="{StaticResource Tip.GraphicsBorderless}" />
+              <CheckBox Grid.Row="3" Grid.Column="1" x:Name="ClientBorderlessCheck" IsThreeState="True"
+                        Content="Borderless window" VerticalAlignment="Center" ToolTip="{StaticResource Tip.GraphicsBorderless}" />
+              <CheckBox Grid.Row="3" Grid.Column="2" x:Name="LmBorderlessCheck" IsThreeState="True"
+                        Content="Borderless window" VerticalAlignment="Center" ToolTip="{StaticResource Tip.GraphicsBorderless}" />
+
+              <Label Grid.Row="4" Content="Framerate limit" ToolTip="{StaticResource Tip.GraphicsFramerate}" />
+              <CheckBox Grid.Row="4" Grid.Column="1" x:Name="ClientFramerateCheck" IsThreeState="True"
+                        Content="FramerateLimit" VerticalAlignment="Center" ToolTip="{StaticResource Tip.GraphicsFramerate}" />
+              <CheckBox Grid.Row="4" Grid.Column="2" x:Name="LmFramerateCheck" IsThreeState="True"
+                        Content="FramerateLimit" VerticalAlignment="Center" ToolTip="{StaticResource Tip.GraphicsFramerate}" />
+
+              <Label Grid.Row="5" Content="Opening skip" ToolTip="{StaticResource Tip.GraphicsOpening}" />
+              <ComboBox Grid.Row="5" Grid.Column="1" x:Name="ClientOpeningBox" IsEditable="True" Margin="0,2,6,2"
+                        ToolTip="{StaticResource Tip.GraphicsOpening}" />
+              <ComboBox Grid.Row="5" Grid.Column="2" x:Name="LmOpeningBox" IsEditable="True" Margin="0,2,6,2"
+                        ToolTip="{StaticResource Tip.GraphicsOpening}" />
+            </Grid>
+            <WrapPanel Margin="0,8,0,0">
+              <Button Content="Reload graphics" Click="ReloadGraphics_Click" ToolTip="{StaticResource Tip.GraphicsReload}" />
+              <Button Content="Write graphics" FontWeight="Bold" Click="WriteGraphics_Click" ToolTip="{StaticResource Tip.GraphicsWrite}" />
+            </WrapPanel>
+            <TextBlock x:Name="GraphicsStatusText" TextWrapping="Wrap" Margin="0,6,0,0" />
+          </StackPanel>
         </GroupBox>
 
         <GroupBox Header="Server settings">

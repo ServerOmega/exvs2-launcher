@@ -19,6 +19,7 @@ public partial class MainWindow : Window
 {
     private readonly ProfileStore _store = ProfileStore.Default();
     private readonly GameConfigWriter _writer = new();
+    private readonly DisplayConfigWriter _display = new();
     private readonly IdentityGenerator _ids = new();
     private readonly WindowsPortOwnerLookup _owners = new();
     private readonly TcpPortProbe _probe = new();
@@ -158,6 +159,7 @@ public partial class MainWindow : Window
             CabMappingText.Text = GameWindowTitle.Describe(null, _current?.LastGameWindowTitle);
             ControllerSummaryText.Text = "";
             GameServerText.Text = "";
+            ClearGraphicsForm();
             return;
         }
         try
@@ -208,6 +210,7 @@ public partial class MainWindow : Window
                 ControllerSummaryText.Text = "1: " + ctrl.Controller.Summary + "    2: " + ctrl.Controller1.Summary;
             }
             catch (Exception ex) { ControllerSummaryText.Text = "Could not read controller keys: " + ex.Message; }
+            LoadGraphicsForm(folder);
         }
         catch (Exception ex) { SerialText.Text = "Could not read the game files: " + ex.Message; }
         RefreshServerVersion();
@@ -274,6 +277,7 @@ public partial class MainWindow : Window
         CabMappingText.Text = "";
         ControllerSummaryText.Text = "";
         GameServerText.Text = "";
+        ClearGraphicsForm();
         MatchUrlBox.Text = "";
         TagSecretBox.Password = "";
         TagSecretStatusText.Text = "";
@@ -744,6 +748,133 @@ public partial class MainWindow : Window
         win.ShowDialog();
         RefreshGameState();
     }
+
+    private void Graphics_Click(object sender, RoutedEventArgs e)
+    {
+        GraphicsBox.BringIntoView();
+        ClientResolutionBox.Focus();
+    }
+
+    private void ReloadGraphics_Click(object sender, RoutedEventArgs e)
+    {
+        var folder = GameFolderBox.Text.Trim();
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            Warn("Pick a game folder first.");
+            return;
+        }
+        LoadGraphicsForm(folder);
+        GraphicsStatusText.Text = "Reloaded graphics from the game folder.";
+    }
+
+    private void WriteGraphics_Click(object sender, RoutedEventArgs e)
+    {
+        if (_current is null) { Warn("Create a cab profile first."); return; }
+        if (!ReadForm()) return;
+        var folder = _current.GameFolder;
+        if (string.IsNullOrWhiteSpace(folder) || !File.Exists(Path.Combine(folder, "config.ini")))
+        {
+            Warn("Pick a game folder that has config.ini first.");
+            return;
+        }
+        var running = ProcessGuard.RunningConflicts();
+        if (running.Count > 0)
+        {
+            Warn("Close these first, then try again: " + string.Join(", ", running) +
+                 "\n\nThe game and LM only pick up graphics changes after they are started again. SnowLauncher would also put old values back if it is open.");
+            return;
+        }
+        var state = ReadGraphicsForm();
+        try
+        {
+            var report = _display.Apply(folder, state, _current.SyncSnowLauncherIni);
+            Log("Graphics written for \"" + _current.Name + "\".");
+            foreach (var w in report.Written) Log("  updated " + w);
+            foreach (var b in report.Backups) Log("  backup  " + b);
+            foreach (var n in report.Notes) Log("  " + n);
+            if (report.Written.Count == 0) Log("  nothing changed");
+            GraphicsStatusText.Text = report.Written.Count == 0
+                ? "Nothing changed — the files already had these graphics settings."
+                : "Wrote graphics. " + report.Written.Count + " file(s) updated, with backups. Restart the game and LM to apply.";
+            if (report.Notes.Any(n => n.Contains("8k")))
+                GraphicsStatusText.Text += " 8k is documented as needing Windowed and Borderless both on.";
+            LoadGraphicsForm(folder);
+        }
+        catch (Exception ex)
+        {
+            Warn("Could not write the graphics settings: " + ex.Message);
+        }
+    }
+
+    private void LoadGraphicsForm(string folder)
+    {
+        try
+        {
+            var state = _display.Read(folder);
+            var res = DisplayOptions.ResolutionChoices(state.Client.Resolution, state.Lm.Resolution);
+            var skip = DisplayOptions.OpeningChoices(state.Client.OpeningScreenSkip, state.Lm.OpeningScreenSkip);
+            ClientResolutionBox.ItemsSource = res;
+            LmResolutionBox.ItemsSource = res;
+            ClientOpeningBox.ItemsSource = skip;
+            LmOpeningBox.ItemsSource = skip;
+            ClientResolutionBox.Text = state.Client.Resolution ?? "";
+            LmResolutionBox.Text = state.Lm.Resolution ?? "";
+            ClientOpeningBox.Text = state.Client.OpeningScreenSkip ?? "";
+            LmOpeningBox.Text = state.Lm.OpeningScreenSkip ?? "";
+            ClientWindowedCheck.IsChecked = state.Client.Windowed;
+            LmWindowedCheck.IsChecked = state.Lm.Windowed;
+            ClientBorderlessCheck.IsChecked = state.Client.BorderlessWindow;
+            LmBorderlessCheck.IsChecked = state.Lm.BorderlessWindow;
+            ClientFramerateCheck.IsChecked = state.Client.FramerateLimit;
+            LmFramerateCheck.IsChecked = state.Lm.FramerateLimit;
+            GraphicsStatusText.Text = "Client: " + state.Client.Summary + "    LM: " + state.Lm.Summary;
+        }
+        catch (Exception ex)
+        {
+            GraphicsStatusText.Text = "Could not read graphics settings: " + ex.Message;
+        }
+    }
+
+    private void ClearGraphicsForm()
+    {
+        ClientResolutionBox.ItemsSource = DisplayOptions.Resolutions;
+        LmResolutionBox.ItemsSource = DisplayOptions.Resolutions;
+        ClientOpeningBox.ItemsSource = DisplayOptions.OpeningScreenSkipValues;
+        LmOpeningBox.ItemsSource = DisplayOptions.OpeningScreenSkipValues;
+        ClientResolutionBox.Text = "";
+        LmResolutionBox.Text = "";
+        ClientOpeningBox.Text = "";
+        LmOpeningBox.Text = "";
+        ClientWindowedCheck.IsChecked = null;
+        LmWindowedCheck.IsChecked = null;
+        ClientBorderlessCheck.IsChecked = null;
+        LmBorderlessCheck.IsChecked = null;
+        ClientFramerateCheck.IsChecked = null;
+        LmFramerateCheck.IsChecked = null;
+        GraphicsStatusText.Text = "";
+    }
+
+    private DisplayFileState ReadGraphicsForm() => new()
+    {
+        Client = new DisplayTargetSettings
+        {
+            Resolution = BlankToNull(ClientResolutionBox.Text),
+            Windowed = ClientWindowedCheck.IsChecked,
+            BorderlessWindow = ClientBorderlessCheck.IsChecked,
+            FramerateLimit = ClientFramerateCheck.IsChecked,
+            OpeningScreenSkip = BlankToNull(ClientOpeningBox.Text),
+        },
+        Lm = new DisplayTargetSettings
+        {
+            Resolution = BlankToNull(LmResolutionBox.Text),
+            Windowed = LmWindowedCheck.IsChecked,
+            BorderlessWindow = LmBorderlessCheck.IsChecked,
+            FramerateLimit = LmFramerateCheck.IsChecked,
+            OpeningScreenSkip = BlankToNull(LmOpeningBox.Text),
+        },
+    };
+
+    private static string? BlankToNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
     private void OpenWeb_Click(object sender, RoutedEventArgs e)
     {

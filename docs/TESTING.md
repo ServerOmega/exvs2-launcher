@@ -1,4 +1,4 @@
-# Testing the v0.3.1 launcher
+# Testing the v0.4.0 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -106,18 +106,24 @@ LM/client need a longer "LM → client delay", and whether the PCB and LM IPs it
    all / Stop lines in the log should use that name. The identity section should show the game folder name
    (for example `EXVS2IB_V29`). After the client is running, it should also show the current game window title
    (often `PCB_03` or similar). The launcher cannot rename that window.
-2. Click **Controllers...**. The window should list the device name and button ids already in `config.ini`
-   (`[controller]`, `[controller-1]`, `[xinput]`). If a Razer Panthera (or another stick) is plugged in, **Refresh**
-   should list it (XInput or DirectInput / WinMM). **Use this device** copies the name; **Bind** next to a button
-   waits for a press and fills the 1-based button id. **Write bindings** backs up `config.ini` (and SnowLauncher.ini
-   if that option is on) and writes only the known keys — arcade bitmasks and comments stay as they were. Close
-   SnowLauncher and the game first.
-3. Under **Server settings**, the card server host/port should match this cab. `Server=` from `config.ini` and
+2. Under **Graphics and resolution**, the Client column should show `config.ini` (often 480p) and the LM column
+   should show `lmnfig.ini` (often 144p), plus Windowed, Borderless, FramerateLimit, and Opening skip. Changing
+   only the client resolution and clicking **Write graphics** should back up `config.ini` and leave `lmnfig.ini`
+   alone. Close the game, LM, and SnowLauncher first, then restart them to pick up the change. `PCB_Resolution` /
+   `LM_Resolution` in SnowLauncher.ini should not change.
+3. Click **Controllers...**. The window should show a controller selector and a rebind list for Controller 1 / 2.
+   Combo keys, raw ids, and `[xinput]` stay under **Advanced**. If a Razer Panthera (or another stick) is plugged
+   in, **Refresh** should list a product name when Windows provides one (not just "XInput Controller 1"). **Use
+   selected controller** copies the game-compatible `Name=` (for example `Razer Panthera PS4`); **Rebind** next to
+   an action waits for a press and fills the 1-based button id; **Clear** empties it. **Write bindings** backs up
+   `config.ini` (and SnowLauncher.ini if that option is on) and writes only the known keys — arcade bitmasks and
+   comments stay as they were. Close SnowLauncher and the game first.
+4. Under **Server settings**, the card server host/port should match this cab. `Server=` from `config.ini` and
    `lmnfig.ini` is shown, along with `DisableSocketHook`. If a `Configurations/server.json` sits next to the card
    server, MatchUrl is shown. The tag secret box stays empty; the note should say whether a secret is already set,
    never the value. **Write server.json** updates MatchUrl (and StunHost) and, if you pasted a secret, the secret —
    the log must not print the secret. Leave the box empty to keep an existing secret.
-4. With the card server running, click **Open web page**. The default browser should open `http://127.0.0.1:28080/`
+5. With the card server running, click **Open web page**. The default browser should open `http://127.0.0.1:28080/`
    (or this cab's host/port). That is the card server WebUI (`/` or `/Cards`).
 
 ## 7. Wizard sets battleMode to 0
@@ -134,17 +140,21 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
 3. Do not use EXIT & SAVE in the test menu to make this change. If a cab was already in a session, restart that cab
    so it rereads the file.
 
-## Known gaps in v0.3.1
+## Known gaps in v0.4.0
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a
   double-click). If your pack needs something else, tell us.
 - The launcher cannot add a second LAN IP for you; the wizard shows the PowerShell command, but you still have to
   run it in an elevated window.
-- No full test-mode editor or resolution helpers yet. The wizard only sets `battleMode` to 0 in
+- No full test-mode editor yet. The wizard only sets `battleMode` to 0 in
   `29\testmode_pcb.json` (an svd1-wrapped store, not plain JSON). Other operator settings (`cpuMode`, time limits,
   coin costs, close times, and the rest) are left alone. If the file uses an svd1 version other than 1, or the SHA-1
   checksum does not match, the launcher will not write it.
-- Controller detection uses XInput and WinMM only. A stick that appears only as a raw HID device may need its
-  name and button ids typed by hand.
+- Controller product names come from HID / SetupAPI and Raw Input when Windows exposes them, then WinMM and XInput.
+  Matching an XInput slot to a HID device is best-effort (IG_ interface index, then pairing leftover IG_ devices in
+  order). A stick that never reports a product string may still show a generic label; you can type the name under
+  Advanced. Button capture still uses XInput or WinMM, not raw HID reports.
+- SnowLauncher.ini `PCB_Resolution` / `LM_Resolution` indexes are not written; only the game INI `Resolution=`
+  strings are. `OpeningScreenSkip` is synced to SnowLauncher only for the observed `SkipAll` = `3` pairing.
 - If "Server" is the card server's process name, the launcher treats it as the stock server.
 - The launcher log is plain text next to the exe; it never contains card values or secrets.

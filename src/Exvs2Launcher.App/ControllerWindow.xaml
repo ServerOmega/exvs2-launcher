@@ -1,75 +1,87 @@
 <Window x:Class="Exvs2Launcher.App.ControllerWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Controller bindings" Width="880" Height="760" MinWidth="740" MinHeight="580"
+        Title="Controller bindings" Width="760" Height="720" MinWidth="640" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         ToolTipService.InitialShowDelay="700"
         ToolTipService.ShowDuration="30000"
         ToolTipService.BetweenShowDelay="200">
   <DockPanel Margin="10">
-    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8">
-      This screen reads and writes the game's existing controller keys in config.ini
-      ([controller], [controller-1], [xinput]). It is not a new input driver. Button ids are
-      1-based numbers, comma-separated for more than one button. Combo keys (AB, BC, AC, ABC)
-      are expanded into the A/B/C lists the hook reads. A Razer Panthera in PS4 mode usually
-      appears as a DirectInput / WinMM device; in PC / XInput mode it appears as an XInput pad.
-    </TextBlock>
+    <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,0,0,8"
+               Text="Pick a controller, then rebind each game action. This writes the game's existing config.ini keys; it is not a new input driver. Combo keys, raw ids, and [xinput] settings are under Advanced." />
 
     <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
       <TextBlock x:Name="StatusText" TextWrapping="Wrap" Margin="0,0,0,8" />
-      <StackPanel Orientation="Horizontal">
+      <WrapPanel>
         <Button Content="Reload" Click="Reload_Click" ToolTip="{StaticResource Tip.ControllerReload}" />
         <Button Content="Write bindings" FontWeight="Bold" Click="Write_Click" ToolTip="{StaticResource Tip.ControllerWrite}" />
         <Button Content="Close" Click="Close_Click" ToolTip="{StaticResource Tip.ControllerClose}" IsCancel="True" />
-      </StackPanel>
+      </WrapPanel>
     </StackPanel>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel>
-        <GroupBox Header="Detected controllers">
+        <GroupBox Header="Controller">
           <Grid>
             <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="*" MinWidth="160" />
+              <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ComboBox x:Name="DeviceBox" IsEditable="False" Margin="0,2,6,2"
                       ToolTip="{StaticResource Tip.ControllerDetected}" />
-            <Button Grid.Column="1" Content="Refresh" Click="RefreshDevices_Click"
+            <Button Grid.Column="1" Content="Refresh" Click="RefreshDevices_Click" Margin="0,2,6,2"
                     ToolTip="{StaticResource Tip.ControllerRefresh}" />
+            <Button Grid.Column="2" Content="Use selected controller" Click="UseSelected_Click" Margin="0,2,0,2"
+                    ToolTip="{StaticResource Tip.ControllerUseSelected}" />
           </Grid>
         </GroupBox>
 
-        <GroupBox Header="[xinput] (config.ini)">
-          <Grid>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="160" />
-              <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-              <RowDefinition /><RowDefinition /><RowDefinition />
-            </Grid.RowDefinitions>
-            <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" x:Name="XInputEnabledCheck"
-                      Content="EmulatedXInputEnabled" ToolTip="{StaticResource Tip.XInputEnabled}" />
-            <Label Grid.Row="1" Content="Mode" ToolTip="{StaticResource Tip.XInputMode}" />
-            <ComboBox Grid.Row="1" Grid.Column="1" x:Name="XInputModeBox" IsEditable="True"
-                      ToolTip="{StaticResource Tip.XInputMode}" />
-            <Label Grid.Row="2" Content="DeviceId" ToolTip="{StaticResource Tip.ControllerDeviceId}" />
-            <ComboBox Grid.Row="2" Grid.Column="1" x:Name="XInputDeviceIdBox" IsEditable="True"
-                      ToolTip="{StaticResource Tip.ControllerDeviceId}" />
-          </Grid>
-        </GroupBox>
+        <TabControl x:Name="SlotTabs" Margin="0,8,0,0">
+          <TabItem Header="Controller 1">
+            <StackPanel Margin="8">
+              <ContentControl x:Name="Slot1Host" />
+            </StackPanel>
+          </TabItem>
+          <TabItem Header="Controller 2">
+            <StackPanel Margin="8">
+              <ContentControl x:Name="Slot2Host" />
+            </StackPanel>
+          </TabItem>
+        </TabControl>
 
-        <GroupBox Header="Controller 1  [controller]">
-          <StackPanel>
-            <ContentControl x:Name="Slot1Host" />
+        <Expander Header="Advanced" Margin="0,8,0,0" IsExpanded="False"
+                  ToolTip="{StaticResource Tip.ControllerAdvanced}">
+          <StackPanel Margin="0,8,0,0">
+            <TextBlock TextWrapping="Wrap" Margin="0,0,0,8" Foreground="Gray"
+                       Text="Raw device name, Mode, DeviceId, combo buttons, and [xinput] keys. The simple rebind list above is enough for most sticks." />
+            <GroupBox Header="Controller 1 extra fields">
+              <ContentControl x:Name="Slot1AdvancedHost" />
+            </GroupBox>
+            <GroupBox Header="Controller 2 extra fields" Margin="0,8,0,0">
+              <ContentControl x:Name="Slot2AdvancedHost" />
+            </GroupBox>
+            <GroupBox Header="[xinput] (config.ini)" Margin="0,8,0,0">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="160" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" x:Name="XInputEnabledCheck"
+                          Content="EmulatedXInputEnabled" ToolTip="{StaticResource Tip.XInputEnabled}" Margin="0,4,0,4" />
+                <Label Grid.Row="1" Content="Mode" ToolTip="{StaticResource Tip.XInputMode}" />
+                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="XInputModeBox" IsEditable="True"
+                          ToolTip="{StaticResource Tip.XInputMode}" />
+                <Label Grid.Row="2" Content="DeviceId" ToolTip="{StaticResource Tip.ControllerDeviceId}" />
+                <ComboBox Grid.Row="2" Grid.Column="1" x:Name="XInputDeviceIdBox" IsEditable="True"
+                          ToolTip="{StaticResource Tip.ControllerDeviceId}" />
+              </Grid>
+            </GroupBox>
           </StackPanel>
-        </GroupBox>
-
-        <GroupBox Header="Controller 2  [controller-1]">
-          <StackPanel>
-            <ContentControl x:Name="Slot2Host" />
-          </StackPanel>
-        </GroupBox>
+        </Expander>
       </StackPanel>
     </ScrollViewer>
   </DockPanel>

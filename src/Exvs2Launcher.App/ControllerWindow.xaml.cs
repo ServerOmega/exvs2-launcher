@@ -11,14 +11,31 @@ namespace Exvs2Launcher.App;
 /// <summary>Bindings editor for the game's existing controller INI keys. No new input driver.</summary>
 public partial class ControllerWindow : Window
 {
-    private static readonly string[] Modes = { "", "xinput-native" };
+    private static readonly string[] Modes = { "", "xinput-native", "directinput" };
     private static readonly string[] DeviceIds = Enumerable.Range(0, 17).Select(i => i == 16 ? "16 (all devices)" : i.ToString()).ToArray();
+
+    private static readonly (string Key, string Label, string Tip, bool Advanced)[] Actions =
+    {
+        ("A", "A (shoot)", "Primary A buttons.", false),
+        ("B", "B (melee)", "Primary B buttons.", false),
+        ("C", "C (jump)", "Primary C buttons.", false),
+        ("D", "D (target)", "Primary D buttons.", false),
+        ("Start", "Start", "Start button id(s).", false),
+        ("Coin", "Coin", "Coin button id(s).", false),
+        ("Card", "Card", "Card button id(s).", false),
+        ("Test", "Test", "Test button id(s). Optional.", false),
+        ("Service", "Service", "Service button id(s). Optional.", false),
+        ("Kill", "Kill", "Kill / exit button id(s). Optional.", false),
+        ("AB", "AB combo", "A+B combo button id(s). Written into both A and B lists.", true),
+        ("BC", "BC combo", "B+C combo button id(s).", true),
+        ("AC", "AC combo", "A+C combo button id(s).", true),
+        ("ABC", "ABC combo", "A+B+C combo button id(s).", true),
+    };
 
     private readonly LauncherProfile _profile;
     private readonly ControllerConfigWriter _writer;
     private readonly Action<string> _log;
     private readonly IControllerDeviceSource _devices;
-    private readonly Window? _ownerWindow;
     private readonly SlotEditor _slot1;
     private readonly SlotEditor _slot2;
     private readonly DispatcherTimer _bindTimer = new() { Interval = TimeSpan.FromMilliseconds(50) };
@@ -33,7 +50,6 @@ public partial class ControllerWindow : Window
     {
         InitializeComponent();
         Owner = owner;
-        _ownerWindow = owner;
         _profile = profile;
         _writer = writer;
         _log = log;
@@ -42,17 +58,23 @@ public partial class ControllerWindow : Window
 
         XInputModeBox.ItemsSource = Modes;
         XInputDeviceIdBox.ItemsSource = DeviceIds;
-        _slot1 = new SlotEditor("controller", UseDeviceForSlot, StartBind);
-        _slot2 = new SlotEditor("controller-1", UseDeviceForSlot, StartBind);
-        Slot1Host.Content = _slot1.Root;
-        Slot2Host.Content = _slot2.Root;
+        _slot1 = new SlotEditor("controller", StartBind);
+        _slot2 = new SlotEditor("controller-1", StartBind);
+        Slot1Host.Content = _slot1.SimpleRoot;
+        Slot2Host.Content = _slot2.SimpleRoot;
+        Slot1AdvancedHost.Content = _slot1.AdvancedRoot;
+        Slot2AdvancedHost.Content = _slot2.AdvancedRoot;
         _bindTimer.Tick += BindTimer_Tick;
         Closed += (_, _) => _bindTimer.Stop();
         RefreshDevices();
         LoadFromDisk();
     }
 
+    private SlotEditor CurrentSlot => SlotTabs.SelectedIndex == 1 ? _slot2 : _slot1;
+
     private void RefreshDevices_Click(object sender, RoutedEventArgs e) => RefreshDevices();
+
+    private void UseSelected_Click(object sender, RoutedEventArgs e) => UseDeviceForSlot(CurrentSlot);
 
     private void RefreshDevices()
     {
@@ -65,9 +87,9 @@ public partial class ControllerWindow : Window
         DeviceBox.ItemsSource = _listed.Select(d => d.Display).ToList();
         if (_listed.Count > 0 && DeviceBox.SelectedIndex < 0) DeviceBox.SelectedIndex = 0;
         if (_listed.Count == 0)
-            Status("No controllers detected through XInput or WinMM. You can still type a device name and button numbers. Plug the stick in and click Refresh.");
+            Status("No controllers detected through HID, XInput, or WinMM. You can still type a device name and button numbers under Advanced. Plug the stick in and click Refresh.");
         else
-            Status("Detected " + _listed.Count + " controller(s). Select one and click “Use this device” on a slot, or press Bind next to a button.");
+            Status("Detected " + _listed.Count + " controller(s). Select one and click “Use selected controller”, then Rebind next to an action.");
     }
 
     private void LoadFromDisk()
@@ -170,7 +192,7 @@ public partial class ControllerWindow : Window
         }
         var dev = _listed[DeviceBox.SelectedIndex];
         slot.ApplyDevice(dev);
-        Status("Set " + slot.Section + " to " + dev.Display + ".");
+        Status("Set " + slot.Section + " to " + dev.IniName + ".");
     }
 
     private void StartBind(SlotEditor slot, TextBox box, string label)
@@ -193,7 +215,7 @@ public partial class ControllerWindow : Window
         if (DateTime.UtcNow >= _bindUntil)
         {
             _bindTimer.Stop();
-            Status("No button was pressed in time. You can type a button number instead.");
+            Status("No button was pressed in time. You can type a button number under Advanced, or try again.");
             _bindingBox = null;
             return;
         }
@@ -235,55 +257,39 @@ public partial class ControllerWindow : Window
     internal sealed class SlotEditor
     {
         public string Section { get; }
-        public Grid Root { get; } = new();
-        private readonly CheckBox _enabled = new() { Content = "Enabled", Margin = new Thickness(0, 4, 14, 4) };
+        public StackPanel SimpleRoot { get; } = new();
+        public Grid AdvancedRoot { get; } = new();
+        private readonly CheckBox _enabled = new() { Content = "Enabled", Margin = new Thickness(0, 0, 0, 8) };
+        private readonly TextBlock _current = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
         private readonly TextBox _name = new();
         private readonly ComboBox _mode = new() { IsEditable = true, ItemsSource = Modes };
         private readonly ComboBox _deviceId = new() { IsEditable = true, ItemsSource = DeviceIds };
         private readonly Dictionary<string, TextBox> _boxes = new(StringComparer.Ordinal);
-        private readonly Action<SlotEditor> _useDevice;
         private readonly Action<SlotEditor, TextBox, string> _bind;
 
-        public SlotEditor(string section, Action<SlotEditor> useDevice, Action<SlotEditor, TextBox, string> bind)
+        public SlotEditor(string section, Action<SlotEditor, TextBox, string> bind)
         {
             Section = section;
-            _useDevice = useDevice;
             _bind = bind;
-            Root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
-            Root.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            Root.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
+            SimpleRoot.Children.Add(_enabled);
+            SimpleRoot.Children.Add(_current);
+            var rebind = new GroupBox { Header = "Rebind" };
+            var rebindGrid = NewFieldGrid();
+            rebind.Content = rebindGrid;
             int row = 0;
-            AddRow(row++, _enabled, span: 2);
-            AddLabeled(row++, "Name", _name, "Use this device", (_, _) => _useDevice(this),
-                "Copy the selected detected controller into this slot (name, and XInput mode or device id when known).");
-            AddLabeled(row++, "Mode", _mode, null, null, "Leave empty for a DirectInput / fight-stick layout. Use xinput-native for an XInput pad.");
-            AddLabeled(row++, "DeviceId", _deviceId, null, null, "0–15 is one pad or stick; 16 means all devices.");
+            foreach (var action in Actions.Where(a => !a.Advanced))
+                AddActionRow(rebindGrid, row++, action.Key, action.Label, action.Tip);
+            SimpleRoot.Children.Add(rebind);
 
-            foreach (var (key, tip) in new[]
-                     {
-                         ("A", "Primary A buttons."),
-                         ("B", "Primary B buttons."),
-                         ("C", "Primary C buttons."),
-                         ("D", "Primary D buttons."),
-                         ("AB", "A+B combo button id(s). Written into both A and B lists."),
-                         ("BC", "B+C combo button id(s)."),
-                         ("AC", "A+C combo button id(s)."),
-                         ("ABC", "A+B+C combo button id(s)."),
-                         ("Start", "Start button id(s)."),
-                         ("Coin", "Coin button id(s)."),
-                         ("Card", "Card button id(s)."),
-                         ("Test", "Test button id(s). Optional."),
-                         ("Service", "Service button id(s). Optional."),
-                         ("Kill", "Kill / exit button id(s). Optional."),
-                     })
-            {
-                var box = new TextBox();
-                _boxes[key] = box;
-                var label = key;
-                AddLabeled(row++, key, box, "Bind", (_, _) => _bind(this, box, label),
-                    tip + " Type 1-based button numbers, or click Bind and press the stick.");
-            }
+            AdvancedRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+            AdvancedRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            AdvancedRoot.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            int adv = 0;
+            AddAdvancedLabeled(adv++, "Name", _name, "The Name= value written to the INI. Use the selector above when you can; this is the game-compatible stored name.");
+            AddAdvancedLabeled(adv++, "Mode", _mode, "Leave empty for a DirectInput / fight-stick layout. Use xinput-native for an XInput pad. directinput is also observed.");
+            AddAdvancedLabeled(adv++, "DeviceId", _deviceId, "0–15 is one pad or stick; 16 means all devices.");
+            foreach (var action in Actions.Where(a => a.Advanced))
+                AddActionRow(AdvancedRoot, adv++, action.Key, action.Label, action.Tip);
         }
 
         public void Show(ControllerSlot slot)
@@ -306,6 +312,7 @@ public partial class ControllerWindow : Window
             Set("Test", slot.Test);
             Set("Service", slot.Service);
             Set("Kill", slot.Kill);
+            RefreshCurrent();
         }
 
         public bool TryRead(out ControllerSlot slot, out string? error)
@@ -338,7 +345,8 @@ public partial class ControllerWindow : Window
 
         public void ApplyDevice(ConnectedController dev)
         {
-            _name.Text = dev.Name;
+            _enabled.IsChecked = true;
+            _name.Text = dev.IniName;
             if (dev.XInputIndex is int slot)
             {
                 _mode.Text = "xinput-native";
@@ -350,37 +358,72 @@ public partial class ControllerWindow : Window
                     _mode.Text = "";
                 _deviceId.Text = joy.ToString();
             }
+            RefreshCurrent();
+        }
+
+        private void RefreshCurrent()
+        {
+            var name = NullIfBlank(_name.Text) ?? "(no device name yet)";
+            var mode = NullIfBlank(_mode.Text);
+            _current.Text = "Current device: " + name + (mode is null ? "" : "  ·  " + mode);
         }
 
         private void Set(string key, string? value) => _boxes[key].Text = value ?? "";
         private string? Get(string key) => NullIfBlank(_boxes[key].Text);
 
-        private void AddRow(int row, UIElement el, int span = 1)
+        private static Grid NewFieldGrid()
         {
-            Root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Grid.SetRow(el, row);
-            Grid.SetColumnSpan(el, span);
-            Root.Children.Add(el);
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            return grid;
         }
 
-        private void AddLabeled(int row, string label, UIElement field, string? button, RoutedEventHandler? click, string tip)
+        private void AddActionRow(Grid grid, int row, string key, string label, string tip)
         {
-            Root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            EnsureRow(grid, row);
+            var box = new TextBox { IsReadOnly = grid != AdvancedRoot && key is not ("Test" or "Service" or "Kill") };
+            // Keep primary bindings editable too so people can type a number if capture misses.
+            box.IsReadOnly = false;
+            _boxes[key] = box;
             var lab = new Label { Content = label, ToolTip = tip, VerticalAlignment = VerticalAlignment.Center, Padding = new Thickness(0, 0, 8, 0) };
             Grid.SetRow(lab, row);
-            Root.Children.Add(lab);
+            grid.Children.Add(lab);
+            box.ToolTip = tip + " 1-based button numbers, or Rebind and press the stick.";
+            Grid.SetRow(box, row);
+            Grid.SetColumn(box, 1);
+            grid.Children.Add(box);
+            var bind = new Button { Content = "Rebind", ToolTip = box.ToolTip, Margin = new Thickness(6, 2, 0, 2), MinWidth = 72 };
+            bind.Click += (_, _) => _bind(this, box, label);
+            Grid.SetRow(bind, row);
+            Grid.SetColumn(bind, 2);
+            grid.Children.Add(bind);
+            var clear = new Button { Content = "Clear", ToolTip = "Clear this binding.", Margin = new Thickness(6, 2, 0, 2), MinWidth = 64 };
+            clear.Click += (_, _) => { box.Text = ""; };
+            Grid.SetRow(clear, row);
+            Grid.SetColumn(clear, 3);
+            grid.Children.Add(clear);
+        }
+
+        private void AddAdvancedLabeled(int row, string label, UIElement field, string tip)
+        {
+            EnsureRow(AdvancedRoot, row);
+            var lab = new Label { Content = label, ToolTip = tip, VerticalAlignment = VerticalAlignment.Center, Padding = new Thickness(0, 0, 8, 0) };
+            Grid.SetRow(lab, row);
+            AdvancedRoot.Children.Add(lab);
             field.SetValue(ToolTipProperty, tip);
             Grid.SetRow(field, row);
             Grid.SetColumn(field, 1);
-            Root.Children.Add(field);
-            if (button is not null && click is not null)
-            {
-                var b = new Button { Content = button, ToolTip = tip, Margin = new Thickness(0, 2, 0, 2) };
-                b.Click += click;
-                Grid.SetRow(b, row);
-                Grid.SetColumn(b, 2);
-                Root.Children.Add(b);
-            }
+            Grid.SetColumnSpan(field, 3);
+            AdvancedRoot.Children.Add(field);
+        }
+
+        private static void EnsureRow(Grid grid, int row)
+        {
+            while (grid.RowDefinitions.Count <= row)
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         }
     }
 }

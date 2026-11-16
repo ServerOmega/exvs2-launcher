@@ -8,7 +8,7 @@ Dates are not committed. Work stays in this private repo until the owner is read
 - [x] README, license placeholder, `.gitignore`
 - [x] Clean-room SnowLauncher notes
 - [x] Architecture proposal and stack recommendation
-- [x] Owner picks a license (all rights reserved)
+- [x] Owner picks a license (GPL-3.0-or-later, 2026-11-16)
 - [x] Owner confirms stack: C# / .NET 8 + WPF; v1 = start order + unique serial/card
 
 ## v0.1.0 MVP (branch `mvp`, awaiting the owner's test)
@@ -64,7 +64,7 @@ This is the first build that can replace SnowLauncher for local + VPS matchmakin
 - Optional handoff to a user-provided mod manager
 - Friend-request / online-tag status once exvs2-matchmaking exposes it
 - Installer / auto-update
-- Public release of the repo, only after a license is chosen and a pass for accidental secrets/binaries
+- [x] Public release of the repo (2026-11-16, after a secrets/binaries pass)
 
 ## Out of scope unless revisited
 

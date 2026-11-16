@@ -4,7 +4,7 @@ A clean-room launcher for **Mobile Suit Gundam: Extreme Vs. 2 Infinite Boost** (
 
 This project is **not affiliated with**, endorsed by, or derived from Bandai Namco, SnowLauncher, TeknoParrot, or EXVS2-POC. It does not include game data, hook DLLs, or any third-party launcher binaries. You must supply your own legally obtained game installation.
 
-Proprietary, all rights reserved (see `LICENSE`).
+Licensed under the GNU General Public License v3.0 (see `LICENSE`).
 
 ## Why this exists
 
@@ -108,4 +108,6 @@ No official binary is published yet; test builds are shared privately.
 
 ## License
 
-Copyright (c) 2026 ServerOmega. All rights reserved. See `LICENSE`.
+Copyright (c) 2026 ServerOmega.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. It is distributed WITHOUT ANY WARRANTY. See `LICENSE` for the full text.

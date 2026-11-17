@@ -113,4 +113,37 @@
   <sys:String x:Key="Tip.MatchmakerList">Your saved matchmaking servers with ping and how many cabinets are online, searching and in a match (refreshed every 15 seconds). Player counts need a matchmaker with the /status page; older ones show the ping only.</sys:String>
   <sys:String x:Key="Tip.UseMatchmaker">Writes the selected server into this cab's card server (Configurations\server.json: OnlineMatching.MatchUrl and StunHost). server.json is backed up first. Restart the card server afterwards so it uses the new server.</sys:String>
   <sys:String x:Key="Tip.EditMatchmakers">Add, edit or remove saved matchmaking servers (name, host, port). The LA and EU entries start without an address: ask in the Discord for them.</sys:String>
+
+  <!-- v0.6.0 -->
+  <sys:String x:Key="Tip.Diagnostics">Build a zip with logs, settings, Windows / GPU / driver info and recent crash events to share when asking for help. Secrets (card values, tag secret, tokens, public IPs) are masked and you see every file before saving. No game files or exes are included.</sys:String>
+  <sys:String x:Key="Tip.ExportProfile">Save this cab profile as a small .json file you can share. It never contains card values, the tag secret, IPs or window titles; the serial is only included if you say so.</sys:String>
+  <sys:String x:Key="Tip.ImportProfile">Load a profile .json someone shared. You review every field first, and an existing profile is never replaced unless you confirm it.</sys:String>
+  <sys:String x:Key="Tip.UpdateNotice">A newer launcher is available. Open the Settings tab to read about it and install it.</sys:String>
+  <sys:String x:Key="Tip.StartEverything">Start every included cab profile: card servers first (each one once, waiting for its port), then the LM, then the clients one at a time with the delays on the All cabs tab. Programs already running are left alone. CPU affinity and priority are never changed.</sys:String>
+  <sys:String x:Key="Tip.StopEverything">Close the clients, then the LM, then the card servers of every included cab profile. Do not use this while someone is mid-match.</sys:String>
+  <sys:String x:Key="Tip.TabAllCabs">All cab profiles at once: which ones Start everything includes, and a status light for each card server, LM and client.</sys:String>
+  <sys:String x:Key="Tip.EverythingLmDelay">Seconds to wait after the LM starts before the first client starts.</sys:String>
+  <sys:String x:Key="Tip.EverythingStagger">Seconds between one client and the next, so the cabs do not all load at the same moment.</sys:String>
+  <sys:String x:Key="Tip.CabsList">Tick Include for the cabs Start everything should start. Lights: green running, amber starting or waiting, red failed, grey off or not used.</sys:String>
+  <sys:String x:Key="Tip.TabHealth">A timeline of starts, exits, card server errors, matches and dropped battles for every cab. Read-only.</sys:String>
+  <sys:String x:Key="Tip.HealthImportant">Only show problems: unexpected exits, errors, failed battles and possible disconnects.</sys:String>
+  <sys:String x:Key="Tip.HealthOpen">Open the saved text file for the selected event (it has the card server log lines around it, masked).</sys:String>
+  <sys:String x:Key="Tip.HealthFolder">Open the folder where problem events are saved.</sys:String>
+  <sys:String x:Key="Tip.TabCards">Cards on the card server, this cab card's stats, and card.ini backups.</sys:String>
+  <sys:String x:Key="Tip.MyCard">Ask the local card server for this cab card's name, play count, wins / losses and last played time. The card keys are only sent to a card server on this PC or LAN.</sys:String>
+  <sys:String x:Key="Tip.CardBackup">Copy this cab's card.ini into the launcher's card backup folder. The backup holds the card keys: keep it private.</sys:String>
+  <sys:String x:Key="Tip.CardRestore">Put a backed-up card.ini back into this cab. The current card.ini is backed up first, and this is refused while the cab's game or LM is running.</sys:String>
+  <sys:String x:Key="Tip.CardSearch">Optional: part of a player name, or a full chip id.</sys:String>
+  <sys:String x:Key="Tip.CardList">List the cards on this cab's card server (names and masked id hints only).</sys:String>
+  <sys:String x:Key="Tip.TabStats">Global leaderboards and this cab card's recent matches.</sys:String>
+  <sys:String x:Key="Tip.Leaderboard">Load the global board through the card server. If the card server cannot reach it, the selected matchmaker's public board is used.</sys:String>
+  <sys:String x:Key="Tip.History">Load this cab card's recent battles from the local card server.</sys:String>
+  <sys:String x:Key="Tip.TabSettings">Launcher updates, Discord Rich Presence and notifications.</sys:String>
+  <sys:String x:Key="Tip.UpdateOnStartup">When the launcher opens, look for a newer release on GitHub and show &quot;Update available&quot;. Nothing is downloaded or installed until you click.</sys:String>
+  <sys:String x:Key="Tip.UpdatePre">Also offer pre-releases (all current launcher builds are pre-releases).</sys:String>
+  <sys:String x:Key="Tip.UpdateInstall">Download the new exe, check its SHA-256 against the release, swap it in (the old exe is kept as .previous) and restart the launcher. Running cabs and card servers keep running.</sys:String>
+  <sys:String x:Key="Tip.UpdateRollback">Put the previous launcher exe back (kept from the last update) and restart.</sys:String>
+  <sys:String x:Key="Tip.Presence">Off by default. Shows &quot;EXVS2 Infinite Boost — In menus / In queue / In match&quot; on your Discord profile while a client runs. Needs the Discord desktop app and a Discord application id.</sys:String>
+  <sys:String x:Key="Tip.PresenceId">The Application ID of a Discord application you create at discord.com/developers (name it EXVS2 IB). See docs/RICH-PRESENCE.md.</sys:String>
+  <sys:String x:Key="Tip.Notify">Queue and match notices. Off by default.</sys:String>
 </ResourceDictionary>

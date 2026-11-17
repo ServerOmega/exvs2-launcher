@@ -17,6 +17,11 @@
         <Button Content="Delete" Click="DeleteProfile_Click" ToolTip="{StaticResource Tip.ProfileDelete}" />
         <Button Content="Save" Click="Save_Click" ToolTip="{StaticResource Tip.ProfileSave}" />
         <Button Content="Troubleshooting" Click="Troubleshooting_Click" ToolTip="{StaticResource Tip.Troubleshooting}" />
+        <Button Content="Diagnostics..." Click="Diagnostics_Click" ToolTip="{StaticResource Tip.Diagnostics}" />
+        <Button Content="Export..." Click="ExportProfile_Click" ToolTip="{StaticResource Tip.ExportProfile}" />
+        <Button Content="Import..." Click="ImportProfile_Click" ToolTip="{StaticResource Tip.ImportProfile}" />
+        <Button x:Name="UpdateNoticeButton" Content="Update available" Visibility="Collapsed" FontWeight="SemiBold"
+                Foreground="DarkGreen" Click="UpdateNotice_Click" ToolTip="{StaticResource Tip.UpdateNotice}" />
       </StackPanel>
       <TextBlock x:Name="StoreText" VerticalAlignment="Center" Foreground="Gray" Margin="6,0,0,0"
                  TextWrapping="Wrap" ToolTip="{StaticResource Tip.ProfileStore}" />
@@ -38,6 +43,10 @@
             <Button x:Name="StopAllButton" Content="Stop all" Click="StopAll_Click"
                     ToolTip="{StaticResource Tip.StopAll}" />
             <Button Content="Check port" Click="CheckPort_Click" ToolTip="{StaticResource Tip.CheckPort}" />
+            <Button x:Name="StartEverythingButton" Content="Start everything" Margin="12,0,0,0"
+                    Click="StartEverything_Click" ToolTip="{StaticResource Tip.StartEverything}" />
+            <Button x:Name="StopEverythingButton" Content="Stop everything"
+                    Click="StopEverything_Click" ToolTip="{StaticResource Tip.StopEverything}" />
           </WrapPanel>
           <TextBlock Grid.Column="1" x:Name="StageText" VerticalAlignment="Center" Margin="10,0,0,0"
                      FontWeight="SemiBold" Text="Idle" TextWrapping="Wrap" />
@@ -123,6 +132,54 @@
             </GroupBox>
           </StackPanel>
         </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="All cabs" Tag="AllCabs" ToolTip="{StaticResource Tip.TabAllCabs}">
+        <DockPanel>
+          <StackPanel DockPanel.Dock="Top">
+            <WrapPanel Margin="0,4,0,4">
+              <Button Content="Start everything" FontWeight="Bold" Click="StartEverything_Click" ToolTip="{StaticResource Tip.StartEverything}" />
+              <Button x:Name="CancelEverythingButton" Content="Cancel" IsEnabled="False" Click="CancelEverything_Click" ToolTip="{StaticResource Tip.Cancel}" />
+              <Button Content="Stop everything" Click="StopEverything_Click" ToolTip="{StaticResource Tip.StopEverything}" />
+              <Label Content="LM → first client (s)" Margin="12,0,0,0" ToolTip="{StaticResource Tip.EverythingLmDelay}" />
+              <TextBox x:Name="EverythingLmDelayBox" Width="40" LostFocus="EverythingDelay_LostFocus" ToolTip="{StaticResource Tip.EverythingLmDelay}" />
+              <Label Content="Between clients (s)" ToolTip="{StaticResource Tip.EverythingStagger}" />
+              <TextBox x:Name="EverythingStaggerBox" Width="40" LostFocus="EverythingDelay_LostFocus" ToolTip="{StaticResource Tip.EverythingStagger}" />
+            </WrapPanel>
+            <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,4"
+                       Text="Order: card servers (each one once, waits for its port) → LM → clients one at a time. Programs already running are left alone. CPU affinity and priority are never changed. ● green = running, amber = starting / waiting, red = failed, grey = off or not used." />
+          </StackPanel>
+          <TextBlock DockPanel.Dock="Bottom" x:Name="EverythingStatusText" TextWrapping="Wrap" Margin="0,4,0,0" FontWeight="SemiBold" />
+          <ListView x:Name="CabsList" ToolTip="{StaticResource Tip.CabsList}">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="Include" Width="60">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate><CheckBox IsChecked="{Binding Include, Mode=TwoWay}" HorizontalAlignment="Center" /></DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="Cab" Width="130" DisplayMemberBinding="{Binding Name}" />
+                <GridViewColumn Header="Card server" Width="95">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate><TextBlock Text="{Binding ServerText}" Foreground="{Binding ServerBrush}" FontWeight="SemiBold" /></DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="LM" Width="95">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate><TextBlock Text="{Binding LmText}" Foreground="{Binding LmBrush}" FontWeight="SemiBold" /></DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="Client" Width="95">
+                  <GridViewColumn.CellTemplate>
+                    <DataTemplate><TextBlock Text="{Binding ClientText}" Foreground="{Binding ClientBrush}" FontWeight="SemiBold" /></DataTemplate>
+                  </GridViewColumn.CellTemplate>
+                </GridViewColumn>
+                <GridViewColumn Header="Window" Width="80" DisplayMemberBinding="{Binding Window}" />
+                <GridViewColumn Header="Game folder" Width="260" DisplayMemberBinding="{Binding Folder}" />
+              </GridView>
+            </ListView.View>
+          </ListView>
+        </DockPanel>
       </TabItem>
 
       <TabItem Header="Card Server" Tag="CardServer" ToolTip="{StaticResource Tip.TabCardServer}">
@@ -375,6 +432,173 @@
                            TextWrapping="Wrap" Margin="0,6,0,0"
                            ToolTip="{StaticResource Tip.CurrentIps}" />
               </Grid>
+            </GroupBox>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Health" Tag="Health" ToolTip="{StaticResource Tip.TabHealth}">
+        <DockPanel>
+          <WrapPanel DockPanel.Dock="Top" Margin="0,4,0,4">
+            <CheckBox x:Name="HealthImportantOnly" Content="Problems only" Margin="0,0,12,0" VerticalAlignment="Center"
+                      Checked="HealthFilter_Changed" Unchecked="HealthFilter_Changed" ToolTip="{StaticResource Tip.HealthImportant}" />
+            <Button Content="Open saved event" Click="HealthOpenEvent_Click" ToolTip="{StaticResource Tip.HealthOpen}" />
+            <Button Content="Open events folder" Click="HealthOpenFolder_Click" ToolTip="{StaticResource Tip.HealthFolder}" />
+            <Button Content="Clear list" Click="HealthClear_Click" />
+          </WrapPanel>
+          <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,0,0,4"
+                     Text="Watches each profile's card server, LM and client (by its own folder) and the card server log. Read-only: it never touches a running program. Problems are saved with the log lines around them (masked) so you can share them." />
+          <TextBlock DockPanel.Dock="Bottom" x:Name="HealthStatusText" Foreground="Gray" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
+          <ListView x:Name="HealthList" MouseDoubleClick="HealthOpenEvent_Click">
+            <ListView.View>
+              <GridView>
+                <GridViewColumn Header="Time" Width="70" DisplayMemberBinding="{Binding At, StringFormat=HH:mm:ss}" />
+                <GridViewColumn Header="Cab" Width="110" DisplayMemberBinding="{Binding Cab}" />
+                <GridViewColumn Header="Source" Width="100" DisplayMemberBinding="{Binding Source}" />
+                <GridViewColumn Header="Event" Width="130" DisplayMemberBinding="{Binding KindLabel}" />
+                <GridViewColumn Header="Detail" Width="420" DisplayMemberBinding="{Binding Message}" />
+              </GridView>
+            </ListView.View>
+          </ListView>
+        </DockPanel>
+      </TabItem>
+
+      <TabItem Header="Cards" Tag="Cards" ToolTip="{StaticResource Tip.TabCards}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <GroupBox Header="This cab's card">
+              <StackPanel>
+                <WrapPanel>
+                  <Button Content="Load card stats" Click="LoadMyCard_Click" ToolTip="{StaticResource Tip.MyCard}" />
+                  <Button Content="Back up card.ini" Click="BackupCard_Click" ToolTip="{StaticResource Tip.CardBackup}" />
+                  <ComboBox x:Name="CardBackupsBox" Width="280" DisplayMemberPath="Label" Margin="6,2" ToolTip="{StaticResource Tip.CardRestore}" />
+                  <Button Content="Restore selected..." Click="RestoreCard_Click" ToolTip="{StaticResource Tip.CardRestore}" />
+                  <Button Content="Open backups folder" Click="OpenCardBackups_Click" />
+                </WrapPanel>
+                <TextBlock x:Name="MyCardText" TextWrapping="Wrap" Margin="0,4,0,0" />
+              </StackPanel>
+            </GroupBox>
+            <GroupBox Header="Cards on this card server">
+              <StackPanel>
+                <WrapPanel>
+                  <TextBox x:Name="CardSearchBox" Width="180" ToolTip="{StaticResource Tip.CardSearch}" />
+                  <Button Content="Refresh" Click="RefreshCards_Click" ToolTip="{StaticResource Tip.CardList}" />
+                  <TextBlock x:Name="CardsStatusText" VerticalAlignment="Center" Margin="8,0,0,0" Foreground="Gray" TextWrapping="Wrap" />
+                </WrapPanel>
+                <ListView x:Name="CardsList" Height="220" Margin="0,4,0,0">
+                  <ListView.View>
+                    <GridView>
+                      <GridViewColumn Header="#" Width="50" DisplayMemberBinding="{Binding CardId}" />
+                      <GridViewColumn Header="Name" Width="200" DisplayMemberBinding="{Binding UserName}" />
+                      <GridViewColumn Header="Chip id (masked)" Width="140" DisplayMemberBinding="{Binding MaskedId}" />
+                    </GridView>
+                  </ListView.View>
+                </ListView>
+                <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,4,0,0"
+                           Text="Read from the card server's own web API; nothing is written to its database. Card ids are masked (the server only gives a short hint). Play count and last played are shown for this cab's card above, because the server needs the card's keys for that." />
+              </StackPanel>
+            </GroupBox>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Stats" Tag="Stats" ToolTip="{StaticResource Tip.TabStats}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <GroupBox Header="Global leaderboard">
+              <StackPanel>
+                <WrapPanel>
+                  <ComboBox x:Name="BoardBox" Width="140" Margin="0,2,6,2" />
+                  <Button Content="Refresh" Click="RefreshBoard_Click" ToolTip="{StaticResource Tip.Leaderboard}" />
+                  <TextBlock x:Name="BoardStatusText" VerticalAlignment="Center" Margin="8,0,0,0" TextWrapping="Wrap" />
+                </WrapPanel>
+                <ListView x:Name="BoardList" Height="240" Margin="0,4,0,0">
+                  <ListView.View>
+                    <GridView>
+                      <GridViewColumn Header="Rank" Width="50" DisplayMemberBinding="{Binding Rank}" />
+                      <GridViewColumn Header="Name" Width="160" DisplayMemberBinding="{Binding DisplayName}" />
+                      <GridViewColumn Header="Class" Width="80" DisplayMemberBinding="{Binding ClassName}" />
+                      <GridViewColumn Header="Grade" Width="50" DisplayMemberBinding="{Binding Grade}" />
+                      <GridViewColumn Header="Rate" Width="70" DisplayMemberBinding="{Binding Rate, StringFormat=0.0}" />
+                      <GridViewColumn Header="W" Width="45" DisplayMemberBinding="{Binding Wins}" />
+                      <GridViewColumn Header="L" Width="45" DisplayMemberBinding="{Binding Losses}" />
+                      <GridViewColumn Header="Matches" Width="60" DisplayMemberBinding="{Binding Matches}" />
+                      <GridViewColumn Header="Win %" Width="60" DisplayMemberBinding="{Binding WinRate, StringFormat=0.0}" />
+                    </GridView>
+                  </ListView.View>
+                </ListView>
+              </StackPanel>
+            </GroupBox>
+            <GroupBox Header="This cab's recent matches">
+              <StackPanel>
+                <WrapPanel>
+                  <Button Content="Load recent matches" Click="LoadHistory_Click" ToolTip="{StaticResource Tip.History}" />
+                  <TextBlock x:Name="HistoryStatusText" VerticalAlignment="Center" Margin="8,0,0,0" TextWrapping="Wrap" />
+                </WrapPanel>
+                <ListView x:Name="HistoryList" Height="200" Margin="0,4,0,0">
+                  <ListView.View>
+                    <GridView>
+                      <GridViewColumn Header="When" Width="120" DisplayMemberBinding="{Binding When}" />
+                      <GridViewColumn Header="Result" Width="55" DisplayMemberBinding="{Binding Result}" />
+                      <GridViewColumn Header="Suit id" Width="55" DisplayMemberBinding="{Binding SuitId}" />
+                      <GridViewColumn Header="Time" Width="50" DisplayMemberBinding="{Binding Duration}" />
+                      <GridViewColumn Header="Score" Width="60" DisplayMemberBinding="{Binding Score}" />
+                      <GridViewColumn Header="Players" Width="320" DisplayMemberBinding="{Binding Players}" />
+                    </GridView>
+                  </ListView.View>
+                </ListView>
+              </StackPanel>
+            </GroupBox>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="Settings" Tag="Settings" ToolTip="{StaticResource Tip.TabSettings}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <GroupBox Header="Launcher updates">
+              <StackPanel>
+                <TextBlock x:Name="UpdateVersionText" Margin="0,0,0,4" />
+                <CheckBox x:Name="UpdateOnStartupCheck" Content="Check for updates when the launcher starts (only tells you; never installs by itself)"
+                          Click="SettingsCheck_Click" ToolTip="{StaticResource Tip.UpdateOnStartup}" />
+                <CheckBox x:Name="UpdatePreCheck" Content="Include pre-releases" Click="SettingsCheck_Click" ToolTip="{StaticResource Tip.UpdatePre}" />
+                <WrapPanel Margin="0,4,0,0">
+                  <Button Content="Check now" Click="CheckUpdate_Click" />
+                  <Button x:Name="InstallUpdateButton" Content="Download and install" IsEnabled="False" Click="InstallUpdate_Click" ToolTip="{StaticResource Tip.UpdateInstall}" />
+                  <Button x:Name="SkipUpdateButton" Content="Skip this version" IsEnabled="False" Click="SkipUpdate_Click" />
+                  <Button x:Name="RollbackButton" Content="Go back to previous version" Click="Rollback_Click" ToolTip="{StaticResource Tip.UpdateRollback}" />
+                  <Button Content="Releases page" Click="OpenReleases_Click" />
+                </WrapPanel>
+                <TextBlock x:Name="UpdateStatusText" TextWrapping="Wrap" Margin="0,4,0,0" />
+              </StackPanel>
+            </GroupBox>
+            <GroupBox Header="Discord Rich Presence">
+              <StackPanel>
+                <CheckBox x:Name="PresenceCheck" Content="Show EXVS2 IB status on my Discord profile" Click="PresenceSettings_Changed" ToolTip="{StaticResource Tip.Presence}" />
+                <WrapPanel Margin="0,2,0,0">
+                  <Label Content="Discord application id" ToolTip="{StaticResource Tip.PresenceId}" />
+                  <TextBox x:Name="PresenceIdBox" Width="200" LostFocus="PresenceSettings_Changed" ToolTip="{StaticResource Tip.PresenceId}" />
+                  <CheckBox x:Name="PresenceButtonCheck" Content="Show a &quot;Join the EXVS2 Discord&quot; button" VerticalAlignment="Center" Margin="8,0,0,0" Click="PresenceSettings_Changed" />
+                  <Button Content="Test" Click="PresenceTest_Click" />
+                  <Button Content="How to get an id" Click="PresenceHelp_Click" />
+                </WrapPanel>
+                <TextBlock x:Name="PresenceStatusText" TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0" />
+              </StackPanel>
+            </GroupBox>
+            <GroupBox Header="Queue and match notifications">
+              <StackPanel>
+                <WrapPanel>
+                  <CheckBox x:Name="NotifySoundCheck" Content="Play a sound" Margin="0,0,12,0" Click="SettingsCheck_Click" />
+                  <CheckBox x:Name="NotifyToastCheck" Content="Show a Windows notification" Margin="0,0,12,0" Click="SettingsCheck_Click" />
+                  <Button Content="Test" Click="NotifyTest_Click" />
+                </WrapPanel>
+                <WrapPanel Margin="0,2,0,0">
+                  <CheckBox x:Name="NotifyQueueCheck" Content="When someone starts searching on the selected matchmaker" Margin="0,0,12,0" Click="SettingsCheck_Click" />
+                  <CheckBox x:Name="NotifyMatchCheck" Content="When a match starts (matchmaker or this PC's card server log)" Click="SettingsCheck_Click" />
+                </WrapPanel>
+                <TextBlock TextWrapping="Wrap" Foreground="Gray" FontSize="11" Margin="0,2,0,0" ToolTip="{StaticResource Tip.Notify}"
+                           Text="Off by default. Uses the selected server's player counts (checked every 15 s) and the local card server log. Nothing fires when the launcher first opens." />
+              </StackPanel>
             </GroupBox>
           </StackPanel>
         </ScrollViewer>

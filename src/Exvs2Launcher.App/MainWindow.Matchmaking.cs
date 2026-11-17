@@ -47,7 +47,15 @@ public partial class MainWindow
                 try { return await _mmProbe.ProbeAsync(r.Server); }
                 catch (Exception ex) { return new ProbeResult(null, ProbeMethod.None, null, ex.Message); }
             }));
-            for (int i = 0; i < rows.Count; i++) rows[i].SetProbe(results[i]);
+            var selected = MatchmakerBox.SelectedItem as MatchmakerRow;
+            for (int i = 0; i < rows.Count; i++)
+            {
+                var previous = rows[i].Probe?.Status;
+                rows[i].SetProbe(results[i]);
+                if (ReferenceEquals(rows[i], selected))
+                    foreach (var n in _notifyRules.FromStatus(rows[i].Server.Name, previous, results[i].Status, _file.Settings))
+                        ShowNotice(n);
+            }
             UpdateMatchmakerStatusText();
         }
         finally { _mmProbing = false; }

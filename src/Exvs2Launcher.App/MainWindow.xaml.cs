@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         _statusTimer.Start();
         RefreshComponentStatus();
         InitMatchmakers();
+        InitV06();
         RestoreLastTab();
     }
 
@@ -246,6 +247,7 @@ public partial class MainWindow : Window
     {
         if (_file.Profiles.Count == 0)
             OpenWizard(firstRun: true);
+        _ = StartupUpdateCheckAsync();
     }
 
     private void OpenWizard(bool firstRun)
@@ -582,6 +584,7 @@ public partial class MainWindow : Window
         if (_current is null) return;
         var plan = StatusPlan();
         if (plan is null) return;
+        _health?.ExpectStop(_current.Name, role);
         int n = _launcher.Sequencer.StopRole(role, plan);
         if (n == 0) Log($"{role} is not running for this profile.");
         RefreshComponentStatus();
@@ -596,7 +599,10 @@ public partial class MainWindow : Window
         if (plan is null) return;
         int n = 0;
         foreach (var role in new[] { ComponentRoles.Client, ComponentRoles.Lm, ComponentRoles.CardServer })
+        {
+            _health?.ExpectStop(_current.Name, role);
             n += _launcher.Sequencer.StopRole(role, plan);
+        }
         Log(n == 0 ? "Nothing to stop for this profile." : $"Stopped {n} program(s) for this profile.");
         RefreshComponentStatus();
     }
@@ -686,6 +692,7 @@ public partial class MainWindow : Window
     {
         _statusTimer.Stop();
         _mmTimer.Stop();
+        ShutdownV06();
         try { ReadForm(); _file.LastSelected = _current?.Name; RememberSelectedTab(); _store.Save(_file); } catch { }
     }
 

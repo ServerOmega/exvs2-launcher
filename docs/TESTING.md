@@ -1,4 +1,4 @@
-# Testing the v0.5.1 launcher
+# Testing the v0.6.0 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
@@ -7,7 +7,9 @@ The main window keeps the cab profile, Start all / Cancel / Stop all / Check por
 status at the top, and the log at the bottom. Other settings are on four tabs: **Play** (cab name, game folder, start
 checkboxes), **Card Server** (path, Card server... manager, server settings, Open web page), **Matchmaking** (server
 dropdown, ping and player counts, Edit list...), and **Cab** (serial and card, Controllers... / Keyboard..., graphics,
-PCB / LM IPs). The last tab you had open is restored the next time the launcher starts.
+PCB / LM IPs). v0.6.0 adds **All cabs**, **Health**, **Cards**, **Stats** and **Settings** tabs, Start everything /
+Stop everything in the top bar, and Diagnostics… / Export… / Import… in the profile bar (sections 9–17). The last
+tab you had open is restored the next time the launcher starts.
 
 ## 0. Put the exe somewhere
 
@@ -175,6 +177,127 @@ Do this with the cabs idle. Nothing here touches the game folders.
    dropdown shows a ping within 15 s ("player count not available" until the matchmaker has `/status`).
    **Use for this card server** → server.json gets `CardServerConfig.OnlineMatching.MatchUrl` and `StunHost`, and a
    `server.json.bak-*` file appears. Restart the card server.
+
+## 9. Start everything / Stop everything (v0.6.0)
+
+Needs two or more cab profiles (e.g. P1 and P2) that each have a working single-cab Start all. All cabs idle.
+
+1. **All cabs** tab: every profile is listed with an **Include** tick, three lights (card server / LM / client), the
+   game window title and folder. Untick a profile → it stays ticked/unticked after a restart.
+2. Set **LM → first client** to 5 and **Between clients** to 8. Click **Start everything** (top bar or tab).
+   Expected order in the log: each distinct card server once ("waiting for port…" then "listening"), then each LM,
+   then wait 5 s, then client 1, wait 8 s, client 2. Lights go amber (Waiting/Starting) → green (Running).
+3. Two profiles that share one card server (same exe and port) start it only once.
+4. Make one profile's card server path wrong: its lights go red ("Failed" / "Skipped"), its LM and client are not
+   started, and the other cabs still start. The status line lists the problem.
+5. **Cancel** during the stagger: nothing more starts; what already runs keeps running.
+6. With everything running, **Start everything** again: running parts are left alone (no second copy, no config
+   writes for running cabs).
+7. **Stop everything** → confirm: clients close, then LMs, then card servers. Task Manager: no process priority or
+   affinity was changed at any point. The stock `server\Server.exe` never appears.
+8. The single-profile **Start all** / **Stop all** still behave as in v0.5.1.
+
+## 10. Health tab (v0.6.0)
+
+1. Start a cab. **Health** shows "started" rows for its card server / LM / client within ~2 s.
+2. Close the client from its own window (or Task Manager): an important "Stopped unexpectedly" row appears with
+   the cab name. **Open saved event** opens a text file with the event and the card server log lines before it.
+3. Stop the client from the launcher instead: the row says "closed by the launcher" and is not marked as a
+   problem.
+4. Play a match (or wait for card server log activity): match / room-end / failed-battle (`STUB SaveFailedBattleLogOn`)
+   / network warning rows appear when the card server log contains them. MATCH and ROOM-END lines only exist in the
+   log of the card server that runs the matchmaker.
+5. **Problems only** hides normal rows. **Open events folder** opens `health-events` next to the profiles file.
+6. Saved files contain no access codes, chip ids, tag secret or public IPs.
+
+## 11. Diagnostics bundle (v0.6.0)
+
+1. Profile bar → **Diagnostics…**. The left list shows every file that will be in the zip; clicking one shows its
+   exact text.
+2. Check: `system/system.txt` has Windows, CPU, RAM, GPU and driver; `system/crash-events.txt` lists Kernel-Power 41
+   / BugCheck 1001 events or "(none)"; `cabs/<cab>/listing.txt` has names, sizes and versions only.
+3. Search the previews for your access code, chip id, tag secret, n2n community and public IP: all show `***`.
+   Your Windows user name in paths is `%USERNAME%`.
+4. **Save zip…** → open the zip: only `.txt` / `.log` / `.json` / `.ini` / `.md` files, no exe / dll / db / images.
+
+## 12. Cards tab (v0.6.0)
+
+Card server running.
+
+1. **Cards on this card server → Refresh**: lists card numbers and names, chip id column shows only a masked hint.
+   The search box filters by name.
+2. **Load card stats**: shows this cab's card name, battles (W / L), and last played. On an older card server
+   without the Stats page it falls back to the recent battle count.
+3. **Back up card.ini** → a new entry appears in the backups dropdown; **Open backups folder** shows it under
+   `card-backups/<cab>`.
+4. With the cab's game running, **Restore selected...** refuses. With it closed, confirm → `card.ini` is replaced,
+   and the replaced file is kept as a backup first. Nothing is written to the card server database.
+
+## 13. Stats tab (v0.6.0)
+
+1. **Global leaderboard**: pick Class solo / Class team / Mix → **Refresh**. Rows show rank, name ((hidden) for
+   hidden players), class (Pilot / Valiant / Ace / Extreme), grade, rate, W / L, matches, win %. The status line
+   says whether it came from the card server or the matchmaker and the minimum matches.
+2. If the cab's card is on the board its row is selected and the rank is shown.
+3. Stop the card server and Refresh: with a matchmaker selected on the Matchmaking tab, the board still loads from
+   the matchmaker's `/leaderboard/data`; otherwise "not available" with a reason.
+4. **Load recent matches**: this cab's last battles with result, suit id, time, score and other players.
+
+## 14. Export / import profiles (v0.6.0)
+
+1. Profile bar → **Export…**. When the profile has a serial you are asked whether to include it (choose No).
+   Open the `.exvs2profile.json`: no IPs, window title, card values, tag secret or serial.
+2. **Import…** the same file: the review screen lists every setting and warnings. You already have that name, so it
+   offers **Add as a new profile** ("P1 (imported)") and **Replace**. Add as new → a second profile appears and the
+   original is unchanged.
+3. Import again, choose **Replace** → a second confirmation appears. No → nothing changes. Yes → the profile is
+   replaced and keeps its serial.
+4. Typing a name that already exists while adding as new is refused. A file that is not a launcher profile (e.g.
+   `{}`) is refused with a message. A profile pointing at stock `server\Server.exe` is not accepted as card server.
+
+## 15. Self-update (v0.6.0)
+
+Use a copy of an older launcher exe in a test folder.
+
+1. **Settings → Launcher updates**: shows the installed version. **Check now** says up to date or which release is
+   available (pre-releases only with the tick).
+2. With "Check for updates when the launcher starts" on, an older exe shows an **Update … available** button in the
+   profile bar a few seconds after start. Nothing is downloaded until you click **Download and install**.
+3. **Download and install** → confirm: the log shows the download, "SHA-256 verified", and the launcher restarts as
+   the new version. `Exvs2Launcher.exe.previous` is next to it.
+4. **Go back to previous version** restores the old exe and restarts.
+5. A tampered download (hash mismatch) is refused and nothing is replaced (covered by unit tests).
+6. **Skip this version** hides the startup notice until a newer release appears.
+
+## 16. Discord Rich Presence (v0.6.0)
+
+Follow docs/RICH-PRESENCE.md to create an application id. Discord desktop app running.
+
+1. Off by default and the id box is empty.
+2. Paste the id → **Test**: your Discord profile shows "EXVS2 Infinite Boost — In menus" for a few seconds, with the
+   "Join the EXVS2 Discord" button if ticked.
+3. Tick **Show EXVS2 IB status…** and start a cab: "In menus" appears; queue / match states follow card server log
+   lines when present. Close all clients: the status clears. Untick: the status clears.
+4. With Discord closed nothing breaks; the launcher retries every 30 s.
+
+## 17. Queue / match notifications (v0.6.0)
+
+1. Off by default. Tick **Play a sound** and/or **Show a Windows notification**, then **Test**.
+2. With the selected matchmaker showing player counts, a player starting to search plays the sound / shows the
+   pop-up (at most one every 45 s). A new match does too when "When a match starts" is ticked.
+3. A match line in this PC's card server log also notifies.
+4. Nothing fires right after the launcher starts (the first reading is only a baseline).
+
+## Known gaps in v0.6.0
+
+- Health only knows what process exits and card server log lines tell it. A 21-01-style disconnect is only visible
+  when the card server logs it; MATCH / ROOM-END lines exist only where the matchmaker runs.
+- Card stats (battles, last played) are shown for each cab's own card only; the card list shows names and masked
+  ids.
+- Rich Presence and queue / match states are best-effort guesses from logs and `/status`.
+- Pop-ups are tray balloon notifications (Windows shows them as notifications); there is no Action Center history
+  entry or click action.
+- Self-update never installs by itself.
 
 ## Known gaps in v0.4.2
 

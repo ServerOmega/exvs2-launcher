@@ -14,7 +14,17 @@ This repo is a from-scratch replacement for the *launcher / orchestrator* layer:
 
 ## Status
 
-Private preview, **v0.5.1 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+Private preview, **v0.6.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+
+- **v0.6.0: run several cabs from one place.** **Start everything** starts every included cab profile in order
+  (each card server once and waits for its port, then the LMs, then the clients with a configurable stagger) with
+  per-cab lights, and **Stop everything** closes them. A **Health** tab watches every cab's processes and card server
+  log and saves problem events; **Diagnostics…** builds a masked zip with a preview
+  ([docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md)); **Cards** and **Stats** tabs show the card server's cards, this
+  cab's stats and `card.ini` backup / restore, global leaderboards and recent matches; profiles can be **exported /
+  imported** without secrets; the launcher can **update itself** from GitHub releases (SHA-256 verified, rollback,
+  never automatic); optional **Discord Rich Presence** ([docs/RICH-PRESENCE.md](docs/RICH-PRESENCE.md)) and
+  **queue / match notifications**, both off by default. See [CHANGELOG.md](CHANGELOG.md).
 
 - **Correct start order.** Starts the patched card server you pick (`Server-Infinite.exe` or `3-Start-Server.bat`),
   waits until `127.0.0.1:28080` accepts connections, then starts the LM (`vsac29_Release_LM.exe`, optional) and the
@@ -121,6 +131,10 @@ Docs and the architecture are in:
 - [docs/SNOWLAUNCHER-NOTES.md](docs/SNOWLAUNCHER-NOTES.md) — observed SnowLauncher behavior (clean-room notes, no source copied)
 - [docs/DESIGN.md](docs/DESIGN.md) — proposed architecture, stack options, and feature list
 - [ROADMAP.md](ROADMAP.md) — MVP milestones
+- [CHANGELOG.md](CHANGELOG.md) — what changed in each version
+- [docs/TESTING.md](docs/TESTING.md) — manual test steps for each feature
+- [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) — what the diagnostics zip contains and masks
+- [docs/RICH-PRESENCE.md](docs/RICH-PRESENCE.md) — setting up Discord Rich Presence
 
 No official binary is published yet; test builds are shared privately.
 

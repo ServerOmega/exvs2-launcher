@@ -23,6 +23,10 @@ Dates are not committed. Work stays in this private repo until the owner is read
 ## v0.6.0 Feature batch (branch `feature/v0.6-batch` → `mvp`)
 
 Plan agreed with the owner on 2026-11-16. A GPU / VRAM monitor was considered and **left out on purpose**.
+
+**Status: built (v0.6.0).** Partial by design: Health can only see 21-01-style drops that the card server logs, and
+MATCH / ROOM-END lines exist only in the matchmaker's log; card play count is shown for each cab's own card only;
+Rich Presence states are best-effort; pop-ups are tray balloons; self-update never installs automatically.
 Everything below stays read-only toward running programs: no CPU affinity or priority changes, no injected code,
 and the stock `server\Server.exe` is never started.
 

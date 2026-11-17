@@ -74,7 +74,7 @@ ordering with fakes, log classification, notification rules and the Rich Presenc
 - [x] Install / update the card server from exvs2-matchmaking releases (SHA-256 verified, release build script,
       idle confirmation, backup + swap keeping config / DB / pictures, health check, automatic rollback)
 - [x] Saved matchmaking server list with ping and player counts (`/status` on the matchmaker, TCP fallback)
-- [ ] Owner tests on a real cab (docs/TESTING.md section 8); matchmaker `/status` deployed to LA / EU
+- [ ] Owner tests on a real cab (docs/TESTING.md section 8); matchmaker `/status` deployed to the operator's own LA / EU servers (the saved list also accepts any third-party or community matchmaker)
 
 ## Milestone 1 — Core library, no game start required
 

@@ -51,11 +51,15 @@ Private preview, **v0.6.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
   state), restarts it and waits until it listens on its port. If it doesn't start or listen, the old folder is put back
   and restarted automatically. Details: [docs/CARD-SERVER-MANAGER.md](docs/CARD-SERVER-MANAGER.md).
 - **Matchmaking server dropdown.** On the Matchmaking tab, a saved list of matchmaking servers (name, host, port; add / edit / remove in
-  **Edit list...**, stored in the profile file). LA and EU are there from the start **without addresses** (ask in the
-  Discord). Each entry shows its ping and how many cabinets are online, searching and in a match, refreshed every 15
+  **Edit list...**, stored in the profile file). You can add **any** matchmaking server, including ones run by other
+  people or communities. LA and EU are only empty-host starter placeholders for servers you may already use (ask in the
+  Discord for those addresses; this repo does not carry them). Each entry shows its ping and how many cabinets are
+  online, searching and in a match, refreshed every 15
   seconds (HTTP `GET /status` on the matchmaker, falling back to a TCP connect; player counts need a matchmaker with
   the `status-endpoint` patch, older ones show the ping only). **Use for this card server** writes the server into
   `Configurations\server.json` (`CardServerConfig.OnlineMatching.MatchUrl` and `StunHost`) after backing it up.
+  Each server has its own tag secret, given by that operator; set it on the Card Server tab when you switch, so the
+  previous secret is not left paired with the new URL. Switching does not move card data. Do it with the cabs idle.
 - **Server settings and Open web page.** On the Card Server tab, the card-server host/port, `Server=` in `config.ini` / `lmnfig.ini`, LM `DisableSocketHook`, and the card server's `Configurations/server.json` MatchUrl live in one section. A remote MatchUrl defaults to port **28090** (the public / VPS matchmaker); the local card server and its web page stay on **28080**. The launcher warns if a non-local MatchUrl uses 28080. The online tag secret can be written there but is never shown or logged (leave the box empty to keep an existing secret). **Open web page** launches the card server WebUI (`http://{host}:{port}/`, or localhost when the server binds `0.0.0.0`) in the default browser.
 - **Unique serial and new card.** A new profile (and the first-run wizard) gets a random unique 4-character serial
   automatically, so you don't have to click a button. If the game folder already has a unique serial in `config.ini`,

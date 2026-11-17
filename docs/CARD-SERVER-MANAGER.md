@@ -55,17 +55,29 @@ StunHost), the online tag secret box, or the package's `2-Configure.bat`. **Impo
 
 ## Matchmaking server dropdown
 
+The list is for **any** matchmaking server, including ones run by other people or communities, not only the operator's
+own LA or EU servers. Switching which saved server a cab uses does not move card data; cards and stats stay on your
+card server. Do this with the cabs idle (no queue, no match, no card save in progress).
+
 * Saved in `exvs2-launcher.profiles.json` as `MatchmakingServers` (name, host, port) and
-  `SelectedMatchmakingServer`. No secrets.
-* Defaults: "LA (Los Angeles)" and "EU (Europe)" on port 28090 with **empty hosts**. The public repository does not
-  carry the server addresses; fill them in with **Edit list...** (host name or IP, or paste `http://host:28090/match`).
+  `SelectedMatchmakingServer`. No secrets. Add, edit, or remove entries in **Edit list...**.
+* Starter placeholders: "LA (Los Angeles)" and "EU (Europe)" on port 28090 with **empty hosts**. Those are only
+  examples of servers you may already use. The public repository does not carry any server addresses. Fill a host in,
+  or add any other operator's server the same way (name, host name or IP, or paste `http://host:28090/match`).
 * Every 15 seconds each server with an address is probed: `GET http://host:port/status` (4 s timeout). Any HTTP
-  answer counts as the ping; a valid status body adds the totals ("6 online (2 searching, 4 in match)"). When HTTP
-  gets no answer at all the launcher times a TCP connect to the same port and shows "(TCP)".
+  answer counts as the ping; a valid status body adds the totals ("6 online (2 searching, 4 in match)") and includes
+  a protocol `version` when the matchmaker supports it. When HTTP gets no answer at all the launcher times a TCP
+  connect to the same port and shows "(TCP)". A missing or incompatible version should be treated as a warning, not as
+  a silent "fully compatible" server.
 * **Use for this card server** writes `CardServerConfig.OnlineMatching.MatchUrl = http://host:port/match` and
   `StunHost = host` into the profile card server's `Configurations\server.json` after a timestamped backup
-  (`server.json.bak-yyyyMMdd-HHmmss`). Other keys (TagSecret, StunPort, …) are untouched. Restart the card server so it
-  uses the new server. The dropdown selects the entry that matches the current MatchUrl when a profile is opened.
+  (`server.json.bak-yyyyMMdd-HHmmss`). Other keys (TagSecret, StunPort, …) are currently left untouched. Restart the
+  card server so it uses the new server. The dropdown selects the entry that matches the current MatchUrl when a
+  profile is opened.
+* Each matchmaking server has its own tag secret, given by that server's operator. Secrets stay in the local card
+  server config (they are never shown, never logged, and never stored in the saved server list or a shared profile).
+  In this version, set the secret in the Card Server tab when you switch, so a previous server's secret is not left
+  paired with the new URL, and so that secret is not sent to a different operator's server.
 
 Fix in this version: older launcher builds wrote MatchUrl / TagSecret at the top level of server.json, but the card
 server reads them from the `CardServerConfig` section; they are now written inside `CardServerConfig` (files without

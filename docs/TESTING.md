@@ -173,10 +173,14 @@ Do this with the cabs idle. Nothing here touches the game folders.
 4. Port clash / rollback: start a second card server on the test folder's port (or any program listening there),
    then run Update: the launcher says which program holds the port, does not swap, and restarts the old server.
    (Automatic rollback after a failed start is covered by the unit tests.)
-5. Main window → **Matchmaking** tab: LA / EU show "no address yet". **Edit list...** → fill in the LA host → the
-   dropdown shows a ping within 15 s ("player count not available" until the matchmaker has `/status`).
-   **Use for this card server** → server.json gets `CardServerConfig.OnlineMatching.MatchUrl` and `StunHost`, and a
-   `server.json.bak-*` file appears. Restart the card server.
+5. Main window → **Matchmaking** tab: the starter LA / EU placeholders show "no address yet". Those are examples
+   only; **Edit list...** can also add any other operator's matchmaking server the same way. Fill in a host (for
+   example the LA placeholder, or a third-party / test server) → the dropdown shows a ping within 15 s ("player count
+   not available" until the matchmaker has `/status`). With the cabs idle, **Use for this card server** → server.json
+   gets `CardServerConfig.OnlineMatching.MatchUrl` and `StunHost`, and a `server.json.bak-*` file appears. If that
+   server uses a different tag secret, set it on the Card Server tab so the previous secret is not left paired with
+   the new URL. Restart the card server. Switching back to a previous saved server should leave cards and stats in
+   place.
 
 ## 9. Start everything / Stop everything (v0.6.0)
 

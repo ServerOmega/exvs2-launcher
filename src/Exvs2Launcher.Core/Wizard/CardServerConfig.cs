@@ -98,10 +98,11 @@ public static class CardServerConfig
         try
         {
             var node = Parse(File.ReadAllText(jsonPath));
-            if (node is null) return null;
-            var match = node["OnlineMatching"]?["MatchUrl"]?.GetValue<string>();
-            var stun = node["OnlineMatching"]?["StunHost"]?.GetValue<string>();
-            var secret = node["OnlineTag"]?["TagSecret"]?.GetValue<string>();
+            if (node is not JsonObject rootObj) return null;
+            var section = Section(rootObj);
+            var match = section["OnlineMatching"]?["MatchUrl"]?.GetValue<string>();
+            var stun = section["OnlineMatching"]?["StunHost"]?.GetValue<string>();
+            var secret = section["OnlineTag"]?["TagSecret"]?.GetValue<string>();
             return new CardServerPublicConfig(jsonPath, EmptyToNull(match), !string.IsNullOrWhiteSpace(secret), EmptyToNull(stun));
         }
         catch (Exception)
@@ -202,11 +203,12 @@ public static class CardServerConfig
             report.Notes.Add("Could not read server.json: " + ex.Message);
             return report;
         }
-        if (root is not JsonObject obj)
+        if (root is not JsonObject rootObject)
         {
             report.Notes.Add("server.json is not a JSON object; it was not changed.");
             return report;
         }
+        var obj = Section(rootObject);
 
         if (url is not null)
         {
@@ -227,7 +229,7 @@ public static class CardServerConfig
         if (bak is not null) report.Backups.Add(bak);
 
         var opts = new JsonSerializerOptions { WriteIndented = true };
-        File.WriteAllText(jsonPath, obj.ToJsonString(opts) + Environment.NewLine, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        File.WriteAllText(jsonPath, rootObject.ToJsonString(opts) + Environment.NewLine, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         report.Written.Add(jsonPath);
         if (url is not null)
             report.Notes.Add("Updated OnlineMatching.MatchUrl to " + url + (stunHost is null ? "" : " and StunHost to " + stunHost) + ".");
@@ -251,6 +253,14 @@ public static class CardServerConfig
             return null;
         return "Port 28080 is your local card server (and its web page). The public matchmaker is on 28090. If this address is a VPS, use :28090.";
     }
+
+    /// <summary>
+    /// The card server binds its settings from the <c>CardServerConfig</c> section of server.json
+    /// (<c>{"CardServerConfig": {"OnlineMatching": {...}}}</c>). Older test files and hand-made configs may have the
+    /// keys at the top level; those are read and written in place.
+    /// </summary>
+    internal static JsonObject Section(JsonObject root) =>
+        root["CardServerConfig"] as JsonObject ?? root;
 
     private static bool LoopbackIsPublicMistake(string host) =>
         host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ||

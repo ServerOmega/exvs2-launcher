@@ -17,6 +17,7 @@
         <Button Content="Delete" Click="DeleteProfile_Click" ToolTip="{StaticResource Tip.ProfileDelete}" />
         <Button Content="Save" Click="Save_Click" ToolTip="{StaticResource Tip.ProfileSave}" />
         <Button Content="Troubleshooting" Click="Troubleshooting_Click" ToolTip="{StaticResource Tip.Troubleshooting}" />
+        <Button Content="Card server..." Click="CardServerManager_Click" ToolTip="{StaticResource Tip.CardServerManager}" />
       </StackPanel>
       <TextBlock x:Name="StoreText" VerticalAlignment="Center" Foreground="Gray" Margin="6,0,0,0"
                  TextWrapping="Wrap" ToolTip="{StaticResource Tip.ProfileStore}" />
@@ -226,6 +227,29 @@
             </WrapPanel>
             <TextBlock x:Name="GraphicsStatusText" TextWrapping="Wrap" Margin="0,6,0,0" />
           </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="Matchmaking server">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="140" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition /><RowDefinition />
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0" Content="Server" ToolTip="{StaticResource Tip.MatchmakerList}" />
+            <ComboBox Grid.Row="0" Grid.Column="1" x:Name="MatchmakerBox" DisplayMemberPath="Display" Margin="0,2,6,2"
+                      SelectionChanged="MatchmakerBox_SelectionChanged" ToolTip="{StaticResource Tip.MatchmakerList}" />
+            <Button Grid.Row="0" Grid.Column="2" Content="Use for this card server" FontWeight="SemiBold"
+                    Click="UseMatchmaker_Click" ToolTip="{StaticResource Tip.UseMatchmaker}" />
+            <Button Grid.Row="0" Grid.Column="3" Content="Edit list..." Click="EditMatchmakers_Click"
+                    ToolTip="{StaticResource Tip.EditMatchmakers}" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" x:Name="MatchmakerStatusText" Foreground="Gray"
+                       TextWrapping="Wrap" FontSize="11" Margin="0,2,0,0" ToolTip="{StaticResource Tip.MatchmakerList}" />
+          </Grid>
         </GroupBox>
 
         <GroupBox Header="Server settings">

@@ -149,6 +149,27 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
 3. Do not use EXIT & SAVE in the test menu to make this change. If a cab was already in a session, restart that cab
    so it rereads the file.
 
+## 8. Card server manager and matchmaking servers (v0.5.0)
+
+Do this with the cabs idle. Nothing here touches the game folders.
+
+1. **Card server...** with a cab profile whose card server is an existing package folder: Status shows Running /
+   Stopped, the port and the version. Stop, then Start: the console window opens and the status says it listens.
+2. Pick a new empty folder (e.g. `C:\exvs2-test-server`), Check for updates (pre-releases on), **Install v0.5.0**:
+   the log shows the download, "SHA-256 verified", a PowerShell build window, then "Installed v0.5.0". The folder has
+   `server\Server-Infinite.exe`, the package scripts and `exvs2-launcher-cardserver.json`. If it was started, it must
+   not clash with a running card server on 28080 (the launcher refuses and says which program has the port).
+3. Update / reinstall on the test folder: without the idle tick the launcher refuses. With it: old server stops, the
+   new one starts and listens, `Configurations\server.json`, `ServerInfinite.db` and `wwwroot\images` are the old
+   ones, and `exvs2-launcher-work\backups\server-<stamp>` has the previous folder.
+4. Port clash / rollback: start a second card server on the test folder's port (or any program listening there),
+   then run Update: the launcher says which program holds the port, does not swap, and restarts the old server.
+   (Automatic rollback after a failed start is covered by the unit tests.)
+5. Main window → Matchmaking server: LA / EU show "no address yet". **Edit list...** → fill in the LA host → the
+   dropdown shows a ping within 15 s ("player count not available" until the matchmaker has `/status`).
+   **Use for this card server** → server.json gets `CardServerConfig.OnlineMatching.MatchUrl` and `StunHost`, and a
+   `server.json.bak-*` file appears. Restart the card server.
+
 ## Known gaps in v0.4.2
 
 - The game and LM are started with no command-line arguments and the game folder as working directory (same as a

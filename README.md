@@ -14,7 +14,7 @@ This repo is a from-scratch replacement for the *launcher / orchestrator* layer:
 
 ## Status
 
-Private preview, **v0.4.4 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
+Private preview, **v0.5.0 (branch `mvp`)**: C# / .NET 8 + WPF. What it does today:
 
 - **Correct start order.** Starts the patched card server you pick (`Server-Infinite.exe` or `3-Start-Server.bat`),
   waits until `127.0.0.1:28080` accepts connections, then starts the LM (`vsac29_Release_LM.exe`, optional) and the
@@ -24,6 +24,23 @@ Private preview, **v0.4.4 (branch `mvp`)**: C# / .NET 8 + WPF. What it does toda
 - **Graphics and resolution.** The main window edits the observed display keys in `config.ini` and `lmnfig.ini` separately: `[display] Resolution` (`144p`, `240p`, `480p`, `720p`, `1080p`, `2k`, `4k`, `8k`, plus any token already in the file), `FramerateLimit`, and `[config] Windowed`, `BorderlessWindow`, `OpeningScreenSkip` (`None`, `SkipReminder`, `SkipBrand`, `SkipAll`). A typical 4-cab layout keeps the LM at 144p and each client at 480p. Files are backed up before they change. SnowLauncher.ini is updated only for `FramerateLimit` and the observed `OpeningScreenSkip=SkipAll` → `3` pairing; its `PCB_Resolution` / `LM_Resolution` indexes are left alone because that table is incomplete. Close the game and LM so they reread the values.
 - **Controller mapper.** A bindings window with a controller selector and a rebind list (one row per game action, Rebind captures the next button press, plus Clear). Combo keys, raw `Name` / `Mode` / `DeviceId`, and `[xinput]` settings are under Advanced. Connected pads and fight sticks are listed through HID / SetupAPI product strings (and bus-reported / friendly names), Raw Input, XInput slots 0–3, and the WinMM joystick API. The UI can show a short product name such as `Razer Panthera` while still writing the game-compatible `Name=` value (observed examples: `Razer Panthera PS4`, `Controller (Xbox One For Windows)`). Rebind captures the next press through Raw Input (HID button usages mapped to the game's 1-based ids), then WinMM, then XInput, and a Last pressed line shows the button number as you press it. This is not a new input driver. Unknown keys such as arcade bitmasks are left alone. Files are backed up before they change, and SnowLauncher.ini is updated when that option is on.
 - **Keyboard bindings.** A separate window (Keyboard...) with Client and LM sections. Each action shows its current hook key name, with Rebind (captures the next key press, 8 second timeout) and Reset to the Infinite Boost pack default. The client is written to `config.ini` `[keyboard]` and the LM to `lmnfig.ini` `[keyboard]` — those are the files `bngrw.dll` / `lmgrw.dll` read. Combo keys are stored the way SnowLauncher does (`ButtonAB` and so on) and expanded into the comma-separated `A=`/`B=`/`C=` lists the hook actually reads (for example `A=J,U,Y,T`). Enter is written as `Return`, the name observed in the pack; `Enter` is accepted when reading. Only names in the hook's key table can be written (letters, digits, arrows, function keys, Enter, Esc, Space, NumPad, and the rest of that list). Shift, Ctrl, Alt, and punctuation are not in that table. Leftover unknown keys such as `ButtonR1` are left alone. Files are backed up before they change, and SnowLauncher.ini is updated when that option is on.
+- **Card server manager (Card server...).** Installs, updates, starts and stops a card server from the
+  [exvs2-matchmaking releases](https://github.com/ServerOmega/exvs2-matchmaking/releases) (pre-releases optional).
+  Releases hold build scripts and a patch, not a compiled server (the original card server has no license, so its
+  program can't be handed out), so the launcher downloads the release zip, checks its SHA-256 (the `.sha256` asset and
+  GitHub's digest must agree) and runs the release's own build script in a PowerShell window. A ready-made Windows zip
+  (`*win-x64*.zip`) would be used directly if a release ever has one. **Update** needs you to tick "all cabs are idle";
+  it builds first while the old server keeps running, then stops it, moves the old `server` folder to
+  `exvs2-launcher-work\backups`, swaps in the new build keeping `Configurations\` (server.json, kestrel.json),
+  `ServerInfinite.db` (+ `-wal` / `-shm`), `wwwroot\images` and other data files (leaderboard / friends / node-id
+  state), restarts it and waits until it listens on its port. If it doesn't start or listen, the old folder is put back
+  and restarted automatically. Details: [docs/CARD-SERVER-MANAGER.md](docs/CARD-SERVER-MANAGER.md).
+- **Matchmaking server dropdown.** A saved list of matchmaking servers (name, host, port; add / edit / remove in
+  **Edit list...**, stored in the profile file). LA and EU are there from the start **without addresses** (ask in the
+  Discord). Each entry shows its ping and how many cabinets are online, searching and in a match, refreshed every 15
+  seconds (HTTP `GET /status` on the matchmaker, falling back to a TCP connect; player counts need a matchmaker with
+  the `status-endpoint` patch, older ones show the ping only). **Use for this card server** writes the server into
+  `Configurations\server.json` (`CardServerConfig.OnlineMatching.MatchUrl` and `StunHost`) after backing it up.
 - **Server settings and Open web page.** The card-server host/port, `Server=` in `config.ini` / `lmnfig.ini`, LM `DisableSocketHook`, and the card server's `Configurations/server.json` MatchUrl live in one section. A remote MatchUrl defaults to port **28090** (the public / VPS matchmaker); the local card server and its web page stay on **28080**. The launcher warns if a non-local MatchUrl uses 28080. The online tag secret can be written there but is never shown or logged (leave the box empty to keep an existing secret). **Open web page** launches the card server WebUI (`http://{host}:{port}/`, or localhost when the server binds `0.0.0.0`) in the default browser.
 - **Unique serial and new card.** A new profile (and the first-run wizard) gets a random unique 4-character serial
   automatically, so you don't have to click a button. If the game folder already has a unique serial in `config.ini`,

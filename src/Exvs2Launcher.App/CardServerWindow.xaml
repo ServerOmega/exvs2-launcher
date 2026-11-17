@@ -1,0 +1,64 @@
+<Window x:Class="Exvs2Launcher.App.CardServerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Card server" Width="760" Height="640" MinWidth="600" MinHeight="520"
+        WindowStartupLocation="CenterOwner" Closing="Window_Closing">
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Top">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="110" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Label Content="Folder" />
+        <TextBox Grid.Column="1" x:Name="FolderBox" LostFocus="FolderBox_LostFocus" Margin="0,2,6,2"
+                 ToolTip="The card server's folder: an existing one (with server\Server-Infinite.exe) or an empty folder for a new install, e.g. C:\exvs2-server." />
+        <Button Grid.Column="2" Content="Browse..." Click="Browse_Click" />
+        <Button Grid.Column="3" Content="Open" Click="OpenFolder_Click" />
+      </Grid>
+      <Grid Margin="0,4,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="110" /><ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Label Content="Status" />
+        <TextBlock Grid.Column="1" x:Name="StateText" VerticalAlignment="Center" FontWeight="SemiBold" TextWrapping="Wrap" />
+      </Grid>
+      <WrapPanel Margin="110,4,0,0">
+        <Button x:Name="StartButton" Content="Start" MinWidth="80" Click="Start_Click" />
+        <Button x:Name="StopButton" Content="Stop" MinWidth="80" Click="Stop_Click" Margin="6,0,0,0" />
+        <Button Content="Open Logs" Click="OpenLogs_Click" Margin="6,0,0,0" />
+        <Button x:Name="ImportPicturesButton" Content="Import pictures..." Click="ImportPictures_Click" Margin="6,0,0,0"
+                ToolTip="Runs the package's Import-Images.bat to copy the WebUI pictures from an official Server-Infinite v1.2.0 folder (they are not part of the source code)." />
+      </WrapPanel>
+
+      <GroupBox Header="Install / update from GitHub releases" Margin="0,10,0,0">
+        <StackPanel>
+          <TextBlock TextWrapping="Wrap" Foreground="#FF475569" Margin="0,0,0,6"
+                     Text="Releases of ServerOmega/exvs2-matchmaking hold build scripts and a patch, not a ready-made server: the original card server has no license, so nobody may hand out its program. The launcher downloads the release, checks its SHA-256, and runs the release's own build script in a PowerShell window (the first build downloads .NET and the source and takes about 5 minutes). Updates keep Configurations (server.json), the card database, the pictures and other data files, back up the old server folder, and roll back automatically if the new server does not start and listen on its port." />
+          <WrapPanel>
+            <CheckBox x:Name="IncludePreCheck" Content="Include pre-releases" VerticalAlignment="Center" Margin="0,0,12,0"
+                      Checked="IncludePre_Changed" Unchecked="IncludePre_Changed" />
+            <Button Content="Check for updates" Click="Check_Click" />
+            <TextBlock x:Name="ReleaseLinkText" VerticalAlignment="Center" Margin="10,0,0,0">
+              <Hyperlink x:Name="ReleaseLink" Click="ReleaseLink_Click">release notes</Hyperlink>
+            </TextBlock>
+          </WrapPanel>
+          <TextBlock x:Name="UpdateText" TextWrapping="Wrap" Margin="0,6,0,0" />
+          <CheckBox x:Name="IdleCheck" Margin="0,8,0,0">
+            <TextBlock TextWrapping="Wrap" Text="All cabs that use this card server are idle: no match, loading or results screen in progress. (Required to update: the server is stopped for a minute or two.)" />
+          </CheckBox>
+          <CheckBox x:Name="StartAfterCheck" Content="Start the card server after a new install" IsChecked="True" Margin="0,4,0,0" />
+          <WrapPanel Margin="0,8,0,0">
+            <Button x:Name="InstallButton" Content="Install" FontWeight="Bold" MinWidth="120" IsEnabled="False" Click="Install_Click" />
+            <Button x:Name="CancelButton" Content="Cancel" IsEnabled="False" Click="Cancel_Click" Margin="6,0,0,0" />
+          </WrapPanel>
+        </StackPanel>
+      </GroupBox>
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Content="Close" IsCancel="True" HorizontalAlignment="Right" MinWidth="90" Margin="0,8,0,0" />
+    <DockPanel Margin="0,8,0,0">
+      <TextBlock DockPanel.Dock="Top" Text="Log" FontWeight="SemiBold" />
+      <TextBox x:Name="LogBox" IsReadOnly="True" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap"
+               VerticalScrollBarVisibility="Auto" Margin="0,2,0,0" />
+    </DockPanel>
+  </DockPanel>
+</Window>

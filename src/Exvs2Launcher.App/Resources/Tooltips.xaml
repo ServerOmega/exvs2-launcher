@@ -103,4 +103,9 @@
   <sys:String x:Key="Tip.KeyboardWrite">Write the bindings to config.ini and lmnfig.ini, and to SnowLauncher.ini if that option is on for this profile. A backup is made if a file changes. Close SnowLauncher, the game, and the LM first. Unknown leftover keys such as ButtonR1 are left alone. Empty values are not written, because the hook can refuse to parse a blank key name.</sys:String>
   <sys:String x:Key="Tip.KeyboardClose">Close this window. Unsaved changes are discarded.</sys:String>
   <sys:String x:Key="Tip.KeyboardResetAll">Restore every action in this list to the Infinite Boost pack defaults in this window. Click Write bindings to save them.</sys:String>
+  <!-- matchmaking server list / card server manager -->
+  <sys:String x:Key="Tip.CardServerManager">Install, update, start and stop the card server from the exvs2-matchmaking GitHub releases. Updates keep your settings, cards and pictures, back up the old server and roll back automatically if the new one does not start.</sys:String>
+  <sys:String x:Key="Tip.MatchmakerList">Your saved matchmaking servers with ping and how many cabinets are online, searching and in a match (refreshed every 15 seconds). Player counts need a matchmaker with the /status page; older ones show the ping only.</sys:String>
+  <sys:String x:Key="Tip.UseMatchmaker">Writes the selected server into this cab's card server (Configurations\server.json: OnlineMatching.MatchUrl and StunHost). server.json is backed up first. Restart the card server afterwards so it uses the new server.</sys:String>
+  <sys:String x:Key="Tip.EditMatchmakers">Add, edit or remove saved matchmaking servers (name, host, port). The LA and EU entries start without an address: ask in the Discord for them.</sys:String>
 </ResourceDictionary>

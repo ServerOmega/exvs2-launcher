@@ -61,6 +61,7 @@ public partial class MainWindow : Window
         _statusTimer.Tick += (_, _) => RefreshComponentStatus();
         _statusTimer.Start();
         RefreshComponentStatus();
+        InitMatchmakers();
     }
 
     // ---------- profile <-> form ----------
@@ -101,6 +102,7 @@ public partial class MainWindow : Window
         UpdateWindowTitle();
         RefreshGameState();
         RefreshServerSettings();
+        if (_mmRows.Count > 0) SyncMatchmakerToServerJson();
     }
 
     private bool ReadForm()
@@ -681,6 +683,7 @@ public partial class MainWindow : Window
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
         _statusTimer.Stop();
+        _mmTimer.Stop();
         try { ReadForm(); _file.LastSelected = _current?.Name; _store.Save(_file); } catch { }
     }
 

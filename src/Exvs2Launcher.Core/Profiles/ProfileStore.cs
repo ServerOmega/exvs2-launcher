@@ -8,6 +8,15 @@ public sealed class ProfileFile
     public int Version { get; set; } = 1;
     public string? LastSelected { get; set; }
     public List<LauncherProfile> Profiles { get; set; } = new();
+
+    /// <summary>Saved matchmaking servers for the dropdown (name, host, port only). Null/empty = LA and EU placeholders.</summary>
+    public List<Exvs2Launcher.Core.Matchmaking.MatchmakingServer>? MatchmakingServers { get; set; }
+
+    /// <summary>Name of the server last picked in the dropdown.</summary>
+    public string? SelectedMatchmakingServer { get; set; }
+
+    /// <summary>Card server updates: also offer GitHub pre-releases (all current exvs2-matchmaking releases are pre-releases).</summary>
+    public bool CardServerIncludePrereleases { get; set; } = true;
 }
 
 /// <summary>

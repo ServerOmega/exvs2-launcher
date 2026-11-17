@@ -20,6 +20,13 @@ Dates are not committed. Work stays in this private repo until the owner is read
       reports which process holds the port
 - [ ] Owner tests on a real cab (see docs/TESTING.md)
 
+## v0.5.0 Card server manager and matchmaking servers (branch `mvp`)
+
+- [x] Install / update the card server from exvs2-matchmaking releases (SHA-256 verified, release build script,
+      idle confirmation, backup + swap keeping config / DB / pictures, health check, automatic rollback)
+- [x] Saved matchmaking server list with ping and player counts (`/status` on the matchmaker, TCP fallback)
+- [ ] Owner tests on a real cab (docs/TESTING.md section 8); matchmaker `/status` deployed to LA / EU
+
 ## Milestone 1 — Core library, no game start required
 
 - Profile store (named cabs, game folder path, card server path)

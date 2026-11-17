@@ -13,6 +13,11 @@
   <sys:String x:Key="Tip.ProfileSave">Save all profiles to the JSON file next to this launcher. Card values are never stored there.</sys:String>
   <sys:String x:Key="Tip.ProfileStore">Where your profiles are saved on this PC.</sys:String>
 
+  <sys:String x:Key="Tip.TabPlay">Cab name, game folder, and which parts Start all should launch (card server, LM, client). Start, stop, and running status stay at the top of the window.</sys:String>
+  <sys:String x:Key="Tip.TabCardServer">Patched card server path, install/update (Card server...), listen address, MatchUrl, tag secret, and Open web page.</sys:String>
+  <sys:String x:Key="Tip.TabMatchmaking">Saved matchmaking servers, ping and player counts, and Use for this card server. Edit the list here.</sys:String>
+  <sys:String x:Key="Tip.TabCab">This cab's serial and card, controller and keyboard bindings, graphics and resolution, and PCB / LM IP addresses.</sys:String>
+
   <sys:String x:Key="Tip.StartAll">Start this cab in the right order: patched card server first (and wait until it is listening), then the Live Monitor if ticked, then the game. It never starts the pack's stock Server.exe.</sys:String>
   <sys:String x:Key="Tip.Cancel">Stop a start that is still in progress. Programs that already started keep running; use a Stop button to close them.</sys:String>
   <sys:String x:Key="Tip.CheckPort">Show what is listening on the card server port (usually 28080). Useful to see whether the patched server, the stock server, or something else is using it.</sys:String>

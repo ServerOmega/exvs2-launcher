@@ -54,7 +54,7 @@ public class NetAndProfileTests
         {
             var store = new ProfileStore(path);
             Assert.Empty(store.Load().Profiles);
-            var file = new ProfileFile { LastSelected = "Test cab" };
+            var file = new ProfileFile { LastSelected = "Test cab", LastSelectedTab = "Card Server" };
             file.Profiles.Add(new LauncherProfile
             {
                 Name = "Test cab", GameFolder = "/games/Test", CardServerPath = "/mm/3-Start-Server.bat",
@@ -64,6 +64,7 @@ public class NetAndProfileTests
 
             var back = store.Load();
             Assert.Equal("Test cab", back.LastSelected);
+            Assert.Equal("Card Server", back.LastSelectedTab);
             var p = Assert.Single(back.Profiles);
             Assert.Equal("/mm/3-Start-Server.bat", p.CardServerPath);
             Assert.True(p.StartLm);

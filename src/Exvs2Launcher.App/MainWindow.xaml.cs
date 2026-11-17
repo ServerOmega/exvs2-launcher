@@ -62,6 +62,7 @@ public partial class MainWindow : Window
         _statusTimer.Start();
         RefreshComponentStatus();
         InitMatchmakers();
+        RestoreLastTab();
     }
 
     // ---------- profile <-> form ----------
@@ -141,6 +142,7 @@ public partial class MainWindow : Window
             .FirstOrDefault(p => ReferenceEquals(ProfileStore.FindByFolder(new ProfileFile { Profiles = { p } }, _current!.GameFolder), p));
         if (dupFolder is not null) { Warn($"Profile \"{dupFolder.Name}\" already uses this game folder. Use one profile per folder."); return false; }
         _file.LastSelected = _current?.Name;
+        RememberSelectedTab();
         try
         {
             _store.Save(_file);
@@ -684,7 +686,47 @@ public partial class MainWindow : Window
     {
         _statusTimer.Stop();
         _mmTimer.Stop();
-        try { ReadForm(); _file.LastSelected = _current?.Name; _store.Save(_file); } catch { }
+        try { ReadForm(); _file.LastSelected = _current?.Name; RememberSelectedTab(); _store.Save(_file); } catch { }
+    }
+
+    private void MainTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // ComboBoxes inside tabs also raise SelectionChanged; only persist the tab strip itself.
+        if (!ReferenceEquals(e.Source, MainTabs) || _loading) return;
+        RememberSelectedTab();
+        try { _store.Save(_file); } catch { }
+    }
+
+    private void RememberSelectedTab()
+    {
+        if (MainTabs.SelectedItem is TabItem item)
+        {
+            var name = item.Header as string ?? item.Tag as string;
+            if (!string.IsNullOrWhiteSpace(name)) _file.LastSelectedTab = name;
+        }
+    }
+
+    private void RestoreLastTab()
+    {
+        var wanted = _file.LastSelectedTab;
+        if (string.IsNullOrWhiteSpace(wanted)) return;
+        _loading = true;
+        try
+        {
+            foreach (var raw in MainTabs.Items)
+            {
+                if (raw is not TabItem item) continue;
+                var header = item.Header as string;
+                var tag = item.Tag as string;
+                if (string.Equals(header, wanted, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(tag, wanted, StringComparison.OrdinalIgnoreCase))
+                {
+                    MainTabs.SelectedItem = item;
+                    return;
+                }
+            }
+        }
+        finally { _loading = false; }
     }
 
     // ---------- identity / server / web UI ----------

@@ -28,6 +28,15 @@
         <Setter Property="Margin" Value="0,6,0,0" />
         <Setter Property="Padding" Value="6" />
       </Style>
+      <Style TargetType="TabControl">
+        <Setter Property="Padding" Value="8" />
+        <Setter Property="Background" Value="White" />
+      </Style>
+      <Style TargetType="TabItem">
+        <Setter Property="Padding" Value="14,6" />
+        <Setter Property="MinWidth" Value="96" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+      </Style>
       <Style TargetType="ToolTip">
         <Setter Property="MaxWidth" Value="420" />
         <Setter Property="Padding" Value="10,8" />

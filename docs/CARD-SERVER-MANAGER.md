@@ -2,6 +2,9 @@
 
 ## Card server... window
 
+Open this window from the main window's **Card Server** tab (**Card server...**). The matchmaking server dropdown,
+ping, player counts, and **Use for this card server** are on the **Matchmaking** tab.
+
 Works on one card server folder, by default the one in the current cab profile.
 
 | Folder you pick | What the launcher treats as |
@@ -46,7 +49,7 @@ the window to close (graceful shutdown), then ends it after 15 seconds.
 8. The three newest backups are kept. For a package install the package's scripts and text files are refreshed in
    the package folder (`1-Build-Server.bat`, `2-Configure.bat`, `3-Start-Server.bat`, `scripts\`, docs).
 
-A fresh install does not configure the server: use **Use for this card server** in the main window (MatchUrl /
+A fresh install does not configure the server: use **Use for this card server** on the Matchmaking tab (MatchUrl /
 StunHost), the online tag secret box, or the package's `2-Configure.bat`. **Import pictures...** runs the package's
 `Import-Images.bat` (the WebUI pictures are not part of the source code).
 

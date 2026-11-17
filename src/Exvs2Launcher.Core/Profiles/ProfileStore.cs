@@ -15,6 +15,9 @@ public sealed class ProfileFile
     /// <summary>Name of the server last picked in the dropdown.</summary>
     public string? SelectedMatchmakingServer { get; set; }
 
+    /// <summary>Header of the last selected main-window tab (Play, Card Server, Matchmaking, Cab).</summary>
+    public string? LastSelectedTab { get; set; }
+
     /// <summary>Card server updates: also offer GitHub pre-releases (all current exvs2-matchmaking releases are pre-releases).</summary>
     public bool CardServerIncludePrereleases { get; set; } = true;
 }

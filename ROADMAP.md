@@ -20,6 +20,12 @@ Dates are not committed. Work stays in this private repo until the owner is read
       reports which process holds the port
 - [ ] Owner tests on a real cab (see docs/TESTING.md)
 
+## v0.5.1 Tabbed main window (branch `mvp`)
+
+- [x] Main window settings grouped into Play, Card Server, Matchmaking, and Cab tabs; launch status and log stay visible
+- [x] Last selected tab remembered in the profile file
+- [ ] Owner tests on a real cab
+
 ## v0.5.0 Card server manager and matchmaking servers (branch `mvp`)
 
 - [x] Install / update the card server from exvs2-matchmaking releases (SHA-256 verified, release build script,

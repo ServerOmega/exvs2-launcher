@@ -1,7 +1,13 @@
-# Testing the v0.4.2 launcher
+# Testing the v0.5.1 launcher
 
 Do these on a cab nobody is playing on. Close SnowLauncher and the game first (the launcher refuses to write files
 or start-all while they are open). Per-component Start/Stop can be used when only part of the cab is running.
+
+The main window keeps the cab profile, Start all / Cancel / Stop all / Check port, and the card server / LM / client
+status at the top, and the log at the bottom. Other settings are on four tabs: **Play** (cab name, game folder, start
+checkboxes), **Card Server** (path, Card server... manager, server settings, Open web page), **Matchmaking** (server
+dropdown, ping and player counts, Edit list...), and **Cab** (serial and card, Controllers... / Keyboard..., graphics,
+PCB / LM IPs). The last tab you had open is restored the next time the launcher starts.
 
 ## 0. Put the exe somewhere
 
@@ -40,7 +46,7 @@ being cut off as a single long line, and the gray "In the files now" note should
 Expected: the profiles JSON appears next to the exe and has no card values or tag secret in it. Game files that
 already had a unique serial and a valid card are not rewritten unless you asked for a new card/serial or a new IP.
 
-The main window still has Browse / Save for an existing profile. **Troubleshooting** explains 21-01, 21-32, card in use /
+The main window still has Browse / Save for an existing profile (Play tab for the folder, then Save). **Troubleshooting** explains 21-01, 21-32, card in use /
 このカードは使用中です, a missing card server, and firewall blocks. The network status line shows `Server=` from both
 `config.ini` and `lmnfig.ini`. If `lmnfig.ini` has `Server=192.168.1.245` (no port), the line turns red and Save
 or Write IPs offers to set `Server=127.0.0.1:28080`. A missing card server also adds a "not answering" warning.
@@ -153,7 +159,7 @@ Close the game and LM first. Click **New** and walk through the setup wizard for
 
 Do this with the cabs idle. Nothing here touches the game folders.
 
-1. **Card server...** with a cab profile whose card server is an existing package folder: Status shows Running /
+1. **Card Server** tab → **Card server...** with a cab profile whose card server is an existing package folder: Status shows Running /
    Stopped, the port and the version. Stop, then Start: the console window opens and the status says it listens.
 2. Pick a new empty folder (e.g. `C:\exvs2-test-server`), Check for updates (pre-releases on), **Install v0.5.0**:
    the log shows the download, "SHA-256 verified", a PowerShell build window, then "Installed v0.5.0". The folder has
@@ -165,7 +171,7 @@ Do this with the cabs idle. Nothing here touches the game folders.
 4. Port clash / rollback: start a second card server on the test folder's port (or any program listening there),
    then run Update: the launcher says which program holds the port, does not swap, and restarts the old server.
    (Automatic rollback after a failed start is covered by the unit tests.)
-5. Main window → Matchmaking server: LA / EU show "no address yet". **Edit list...** → fill in the LA host → the
+5. Main window → **Matchmaking** tab: LA / EU show "no address yet". **Edit list...** → fill in the LA host → the
    dropdown shows a ping within 15 s ("player count not available" until the matchmaker has `/status`).
    **Use for this card server** → server.json gets `CardServerConfig.OnlineMatching.MatchUrl` and `StunHost`, and a
    `server.json.bak-*` file appears. Restart the card server.

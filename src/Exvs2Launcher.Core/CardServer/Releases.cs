@@ -7,7 +7,7 @@ namespace Exvs2Launcher.Core.CardServer;
 public sealed record ReleaseAsset(string Name, string DownloadUrl, long Size, string? Digest);
 
 public sealed record ReleaseInfo(string Tag, string Name, bool Prerelease, bool Draft, DateTimeOffset? PublishedAt,
-    string HtmlUrl, IReadOnlyList<ReleaseAsset> Assets)
+    string HtmlUrl, IReadOnlyList<ReleaseAsset> Assets, string? Body = null)
 {
     public string Label => Tag + (Prerelease ? " (pre-release)" : "");
 }
@@ -72,7 +72,7 @@ public static class ReleaseFeed
             DateTimeOffset? published = DateTimeOffset.TryParse(Str(r, "published_at"), CultureInfo.InvariantCulture,
                 DateTimeStyles.AssumeUniversal, out var p) ? p : null;
             list.Add(new ReleaseInfo(tag, Str(r, "name") ?? tag, Bool(r, "prerelease"), Bool(r, "draft"), published,
-                Str(r, "html_url") ?? "", assets));
+                Str(r, "html_url") ?? "", assets, Str(r, "body")));
         }
         return list;
     }

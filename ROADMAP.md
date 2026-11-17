@@ -20,6 +20,45 @@ Dates are not committed. Work stays in this private repo until the owner is read
       reports which process holds the port
 - [ ] Owner tests on a real cab (see docs/TESTING.md)
 
+## v0.6.0 Feature batch (branch `feature/v0.6-batch` → `mvp`)
+
+Plan agreed with the owner on 2026-11-16. A GPU / VRAM monitor was considered and **left out on purpose**.
+Everything below stays read-only toward running programs: no CPU affinity or priority changes, no injected code,
+and the stock `server\Server.exe` is never started.
+
+1. **Start everything (multi-cab)**: one button starts every included cab profile in order. Card servers first
+   (each distinct server once, wait for its port), then the LM, then the clients with a configurable stagger.
+   Per-cab status lights for card server / LM / client, and Stop everything (clients → LM → servers).
+2. **Health tab**: watches the card server, LM and client of every profile by folder-scoped PID, records starts,
+   exits and crashes (exit code when known), tails the card server log for errors, failed battles and room ends
+   (21-01-style drops when the log shows them), and saves the surrounding log lines (masked) per event.
+3. **Diagnostics bundle**: one click builds a zip with launcher and card server logs, profiles and INI / JSON
+   settings with secrets masked, OS / GPU / driver info, a summary of recent crash events (System 41 / 1001),
+   and a top-level file listing of each cab folder (names, sizes, versions; no hashes). A preview lists every
+   entry before saving. Executables, game assets and secrets are never included.
+4. ~~GPU / VRAM monitor~~ (excluded by the owner).
+5. **Card manager**: lists cards from the card server's web API (`/ui/card/getAll`, names + masked id hints) and
+   shows play count / last played for each cab's own card (`/ui/card-stats`). Back up and restore each cab's
+   `card.ini` (current file backed up first; refused while that cab is running). No database writes.
+6. **Leaderboards and match history**: global Class solo / Class team / Mix boards through the card server
+   (`/ui/leaderboard/board/{board}`, falls back to the matchmaker's public `/leaderboard/data`), the rank of the
+   cab's card, and its recent battles (`/ui/battle-history`). Card keys are only ever sent to a local card server.
+7. **Shareable profiles**: export a cab profile to `.json` without secrets (no tag secret, card values, IPs or
+   window titles; serial optional) and import it through a review screen; an existing profile is never
+   overwritten without confirmation.
+8. **Launcher self-update**: checks ServerOmega/exvs2-launcher releases (pre-release toggle), downloads the exe,
+   verifies SHA-256 (`.sha256` asset, GitHub digest or release notes), swaps it by rename and keeps the previous
+   exe for one-click rollback. "Check on startup" only notifies; installing always needs a click.
+9. **Discord Rich Presence** (off by default): minimal IPC client over Discord's local named pipe; shows
+   EXVS2 IB in menus / in queue / in match as far as the launcher can tell, with a button to the Discord server.
+   The Discord application id is configurable and blank by default (docs/RICH-PRESENCE.md).
+10. **Queue / match notifications** (off by default): a sound and/or Windows notification when the selected
+    matchmaker's `/status` shows players searching or a new match, or when the local card server log shows a
+    match for one of this PC's cabs.
+
+Tests cover masking, profile export / import, update hash checks, svd1 files staying untouched, start-everything
+ordering with fakes, log classification, notification rules and the Rich Presence frame format.
+
 ## v0.5.1 Tabbed main window (branch `mvp`)
 
 - [x] Main window settings grouped into Play, Card Server, Matchmaking, and Cab tabs; launch status and log stay visible

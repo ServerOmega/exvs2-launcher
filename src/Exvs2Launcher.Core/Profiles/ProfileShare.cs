@@ -199,7 +199,8 @@ public static class ProfileShare
             }
             else
             {
-                p.Name = review.SuggestedNewName;
+                if (string.Equals(p.Name.Trim(), review.Conflict.Name.Trim(), StringComparison.OrdinalIgnoreCase))
+                    p.Name = review.SuggestedNewName;
                 file.Profiles.Add(p);
             }
         }

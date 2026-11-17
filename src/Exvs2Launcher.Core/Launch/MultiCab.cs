@@ -300,7 +300,8 @@ public sealed class SequencerCabControl : ICabControl
     public int Stop(LauncherProfile profile, string role) =>
         For(profile).Sequencer.StopRole(role, StatusPlan(profile));
 
-    private static StartPlan StatusPlan(LauncherProfile p)
+    /// <summary>A plan that covers all three roles of a profile, for status checks and stops.</summary>
+    public static StartPlan StatusPlan(LauncherProfile p)
     {
         var b = p.ToStartPlan();
         return new StartPlan

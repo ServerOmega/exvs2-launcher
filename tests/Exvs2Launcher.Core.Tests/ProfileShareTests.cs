@@ -62,6 +62,17 @@ public class ProfileShareTests
     }
 
     [Fact]
+    public void Import_as_new_keeps_a_name_the_user_typed_on_the_review_screen()
+    {
+        var file = new ProfileFile();
+        file.Profiles.Add(new LauncherProfile { Name = "P2", GameFolder = @"E:\mine" });
+        var r = ProfileShare.Review(ProfileShare.Export(Sample(), false), file);
+        r.Profile.Name = "Cab 3";
+        ProfileShare.Apply(r, file, overwrite: false);
+        Assert.Equal(new[] { "P2", "Cab 3" }, file.Profiles.Select(p => p.Name));
+    }
+
+    [Fact]
     public void Import_drops_duplicate_serial_and_stock_server()
     {
         var file = new ProfileFile();

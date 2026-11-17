@@ -38,6 +38,7 @@ public sealed class HealthMonitor
     private readonly HashSet<(string Cab, string Role)> _expectedStops = new();
     private readonly Dictionary<string, LogTailer?> _tailers = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, DateTime> _lastSame = new(StringComparer.Ordinal);
+    private readonly object _gate = new();
 
     /// <param name="status">Folder-scoped status of one role of one profile.</param>
     /// <param name="tailerFor">Card server path → log tailer (null if it has no Logs folder).</param>
@@ -54,9 +55,17 @@ public sealed class HealthMonitor
     public int ContextLines { get; set; } = 20;
 
     /// <summary>Call before the launcher stops a program on purpose so the exit is not reported as unexpected.</summary>
-    public void ExpectStop(string cab, string role) => _expectedStops.Add((cab, role));
+    public void ExpectStop(string cab, string role)
+    {
+        lock (_gate) _expectedStops.Add((cab, role));
+    }
 
     public IReadOnlyList<HealthEvent> Poll(IEnumerable<LauncherProfile> profiles)
+    {
+        lock (_gate) return PollCore(profiles);
+    }
+
+    private IReadOnlyList<HealthEvent> PollCore(IEnumerable<LauncherProfile> profiles)
     {
         var events = new List<HealthEvent>();
         var list = profiles.Where(p => !string.IsNullOrWhiteSpace(p.GameFolder) || !string.IsNullOrWhiteSpace(p.CardServerPath)).ToList();

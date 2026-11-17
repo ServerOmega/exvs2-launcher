@@ -42,6 +42,9 @@ public sealed class LauncherProfile
     /// </summary>
     public string? LastGameWindowTitle { get; set; }
 
+    /// <summary>Included when "Start everything" starts all cabs (v0.6.0). Default on.</summary>
+    public bool IncludeInStartEverything { get; set; } = true;
+
     public StartPlan ToStartPlan() => new()
     {
         GameFolder = GameFolder,

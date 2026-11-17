@@ -38,6 +38,17 @@ public sealed class CabLauncher
                 ". SnowLauncher rewrites the game files and starts the stock server; a running game would be started twice.",
                 Array.Empty<IStartedProcess>());
 
+        Prepare(all, profile);
+        return await _sequencer.RunAsync(profile.ToStartPlan(), ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The file side of Start all, without the process check or the start: warns about duplicate serials and bad
+    /// card.ini, resolves the PCB / LM IPs, and writes the card server address into config.ini / lmnfig.ini.
+    /// "Start everything" calls this for each cab before anything is started.
+    /// </summary>
+    public void Prepare(ProfileFile all, LauncherProfile profile)
+    {
         var game = new GameFolder(profile.GameFolder);
         if (File.Exists(game.ClientIni))
         {
@@ -81,8 +92,6 @@ public sealed class CabLauncher
         {
             Say("config.ini not found in the game folder; nothing written.");
         }
-
-        return await _sequencer.RunAsync(profile.ToStartPlan(), ct).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -20,6 +20,9 @@ public sealed class ProfileFile
 
     /// <summary>Card server updates: also offer GitHub pre-releases (all current exvs2-matchmaking releases are pre-releases).</summary>
     public bool CardServerIncludePrereleases { get; set; } = true;
+
+    /// <summary>v0.6.0 launcher-wide settings (start everything, updates, Rich Presence, notifications, health).</summary>
+    public LauncherSettings Settings { get; set; } = new();
 }
 
 /// <summary>
@@ -54,7 +57,11 @@ public sealed class ProfileStore
     {
         if (!File.Exists(FilePath)) return new ProfileFile();
         var text = File.ReadAllText(FilePath);
-        return JsonSerializer.Deserialize<ProfileFile>(text, Json) ?? new ProfileFile();
+        var file = JsonSerializer.Deserialize<ProfileFile>(text, Json) ?? new ProfileFile();
+        file.Settings ??= new LauncherSettings();
+        file.Settings.Normalize();
+        file.Profiles ??= new List<LauncherProfile>();
+        return file;
     }
 
     public void Save(ProfileFile file)

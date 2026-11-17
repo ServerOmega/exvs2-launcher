@@ -3,11 +3,22 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- High-DPI is set in app.manifest for WPF; the WinForms analyzer warning does not apply. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
     <AssemblyName>Exvs2Launcher</AssemblyName>
     <RootNamespace>Exvs2Launcher.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- WinForms is only used for the tray balloon (Notifier); keep WPF types unambiguous. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="8.0.0" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Exvs2Launcher.Core/Exvs2Launcher.Core.csproj" />
   </ItemGroup>
